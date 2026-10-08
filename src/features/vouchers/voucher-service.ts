@@ -9,6 +9,8 @@ import { db, type VoucherBatch } from '../../core/db/schema';
 import type { RouterClient } from '../../core/router/client';
 import type { HotspotUser } from '../../core/router/types';
 import { generateCode } from '../../core/utils/random-code';
+import { parseRouterDurationToMinutes } from '../../core/utils/validation';
+import { buildVoucherComment } from '../setup/router-scripts';
 import { getPlan } from '../plans/plan-service';
 import { MAX_VOUCHERS_PER_BATCH } from '../../core/constants';
 
@@ -49,6 +51,22 @@ const legacyGenerateBatchSchema = z.object({
 });
 
 /**
+ * Dilempar jika sebagian user gagal dibuat di router.
+ * Voucher yang berhasil tetap disimpan sebagai batch (bisa dicetak).
+ */
+export class PartialBatchError extends Error {
+  readonly batch: VoucherBatch;
+  readonly failedCount: number;
+
+  constructor(message: string, batch: VoucherBatch, failedCount: number) {
+    super(message);
+    this.name = 'PartialBatchError';
+    this.batch = batch;
+    this.failedCount = failedCount;
+  }
+}
+
+/**
  * Generate batch voucher dengan multi-paket
  * Satu batch bisa berisi voucher dari beberapa paket berbeda
  */
@@ -71,13 +89,27 @@ export async function generateMultiPlanBatch(
     })
   );
 
+  // Ambil masa berlaku (menit) dari profil di router. Dipakai untuk |v= di comment user,
+  // karena vm-cleaner hanya memproses user yang punya |v= dan |u=.
+  const routerProfiles = await client.print<{ name: string; 'session-timeout'?: string }>(
+    '/ip/hotspot/user/profile'
+  );
+  const validityByProfile = new Map<string, number | null>();
+  for (const rp of routerProfiles) {
+    validityByProfile.set(rp.name, parseRouterDurationToMinutes(rp['session-timeout']));
+  }
+  for (const { plan } of plans) {
+    if (!validityByProfile.has(plan.profileName)) {
+      throw new Error(`Profil "${plan.profileName}" tidak ditemukan di router`);
+    }
+  }
+
   // Get existing users untuk cek duplikat
   const existingUsers = await client.print<HotspotUser>('/ip/hotspot/user');
   const existingUsernames = new Set(existingUsers.map(u => u.name));
 
   // Generate codes untuk semua paket
   const codes: Array<{ user: string; pass: string; planId: string }> = [];
-  const sharedPassword = samePassword ? generateCode() : '';
 
   // Generate codes per paket
   for (const { planId, qty } of validated.items) {
@@ -101,7 +133,8 @@ export async function generateMultiPlanBatch(
         codes.some(c => c.user === username)
       );
 
-      const password = samePassword ? sharedPassword : generateCode();
+      // Mode "user = password": password sama dengan username akun itu sendiri
+      const password = samePassword ? username : generateCode();
 
       codes.push({ user: username, pass: password, planId });
     }
@@ -112,6 +145,7 @@ export async function generateMultiPlanBatch(
 
   // Create users di router (sequential untuk menghindari race condition)
   const failedUsers: Array<{ code: { user: string; pass: string; planId: string }; error: string }> = [];
+  const createdCodes: typeof codes = [];
 
   for (const code of codes) {
     try {
@@ -124,7 +158,12 @@ export async function generateMultiPlanBatch(
         name: code.user,
         password: code.pass,
         profile: planInfo.plan.profileName,
-        comment: `vm|b=${batchId}|p=${planInfo.plan.price}|plan=${code.planId}`,
+        comment:
+          buildVoucherComment(
+            batchId,
+            planInfo.plan.price,
+            validityByProfile.get(planInfo.plan.profileName) ?? null
+          ) + `|plan=${code.planId}`,
       };
 
       // Add limit-bytes-total jika ada
@@ -133,34 +172,45 @@ export async function generateMultiPlanBatch(
       }
 
       await client.add('/ip/hotspot/user', body);
+      createdCodes.push(code);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       failedUsers.push({ code, error: errorMessage });
     }
   }
 
-  // Jika ada yang gagal, throw error dengan detail
-  if (failedUsers.length > 0) {
-    const failedCount = failedUsers.length;
-    const successCount = codes.length - failedCount;
-    
+  // Semua gagal: tidak ada yang perlu disimpan
+  if (createdCodes.length === 0) {
     throw new Error(
-      `Gagal membuat ${failedCount} dari ${codes.length} user. ` +
-      `Berhasil: ${successCount}. ` +
-      `Error pertama: ${failedUsers[0].error}`
+      `Gagal membuat semua ${codes.length} user. Error pertama: ${failedUsers[0]?.error ?? 'Unknown error'}`
     );
   }
 
-  // Save batch ke Dexie
+  // Simpan batch HANYA berisi voucher yang benar-benar ada di router,
+  // supaya tidak ada user yatim di router tanpa catatan dan batch tetap bisa dicetak.
+  const createdByPlan = new Map<string, number>();
+  for (const c of createdCodes) {
+    createdByPlan.set(c.planId, (createdByPlan.get(c.planId) ?? 0) + 1);
+  }
   const batch: VoucherBatch = {
     id: batchId,
-    items: validated.items,
+    items: [...createdByPlan.entries()].map(([planId, qty]) => ({ planId, qty })),
     createdAt: Date.now(),
     samePassword: validated.samePassword,
-    codes,
+    codes: createdCodes,
   };
 
   await db.batches.add(batch);
+
+  if (failedUsers.length > 0) {
+    throw new PartialBatchError(
+      `Gagal membuat ${failedUsers.length} dari ${codes.length} user. ` +
+        `${createdCodes.length} voucher berhasil dan tersimpan sebagai batch. ` +
+        `Error pertama: ${failedUsers[0].error}`,
+      batch,
+      failedUsers.length
+    );
+  }
 
   return batch;
 }
@@ -256,17 +306,6 @@ export async function deleteBatch(
   for (const user of batchUsers) {
     try {
       await client.remove('/ip/hotspot/user', user['.id']);
-      
-      // Also remove scheduler if exists
-      const schedulerName = `vm-${user.name}`;
-      const schedulers = await client.print<{ '.id': string; name: string }>(
-        '/system/scheduler',
-        { name: schedulerName }
-      );
-      
-      if (schedulers.length > 0) {
-        await client.remove('/system/scheduler', schedulers[0]['.id']);
-      }
     } catch (error) {
       console.error(`Failed to delete user ${user.name}:`, error);
       // Continue deleting other users

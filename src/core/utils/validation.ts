@@ -35,6 +35,37 @@ export function parseDurationToMinutes(duration: string): number | null {
 }
 
 /**
+ * Parse durasi yang dikembalikan RouterOS ke total menit.
+ * Mendukung "1h30m", "45m", "1d", "1w2d" dan format "HH:MM:SS" / "D:HH:MM:SS".
+ * Detik dibulatkan ke atas. Mengembalikan null jika tidak bisa dibaca atau 0.
+ */
+export function parseRouterDurationToMinutes(duration: string | undefined): number | null {
+  if (!duration) return null;
+  const text = duration.trim();
+  if (!text || text === 'none' || text === '0s') return null;
+
+  let seconds = 0;
+  if (/^\d+(:\d+){2,3}$/.test(text)) {
+    // Format RouterOS: HH:MM:SS atau D:HH:MM:SS
+    const parts = text.split(':').map(Number);
+    if (parts.length === 3) {
+      seconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+    } else if (parts.length === 4) {
+      seconds = parts[0] * 86400 + parts[1] * 3600 + parts[2] * 60 + parts[3];
+    }
+  } else if (/^(\d+[wdhms])+$/.test(text)) {
+    const unit: Record<string, number> = { w: 604800, d: 86400, h: 3600, m: 60, s: 1 };
+    for (const m of text.matchAll(/(\d+)([wdhms])/g)) {
+      seconds += Number(m[1]) * unit[m[2]];
+    }
+  } else {
+    return null;
+  }
+
+  return seconds > 0 ? Math.ceil(seconds / 60) : null;
+}
+
+/**
  * Validasi masa berlaku profil hotspot (KEPUTUSAN TERBARU §4)
  * - Maksimal 7 jam (420 menit)
  * - Satuan menit dan jam saja (mis. "30m", "1h", "3h", "5h", "7h")

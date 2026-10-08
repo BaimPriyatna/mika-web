@@ -3,7 +3,7 @@
  * Sesuai Task 7.4 & DESIGN.md §6.4
  */
 
-import React, { Component, type ErrorInfo, type ReactNode } from 'react';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 

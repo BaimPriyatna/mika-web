@@ -26,7 +26,7 @@ export const DEFAULT_OPERATIONAL_HOURS: OperationalHours = {
 export function buildOnLoginScript(): string {
   return `:local u $user;
 :local c [/ip hotspot user get [find name=$u] comment];
-:if ([:find $c "vm|"] >= 0 && [:find $c "|u="] < 0) do={
+:if ([:typeof [:find $c "vm|"]] != "nil" && [:typeof [:find $c "|u="]] = "nil") do={
   /ip hotspot user set [find name=$u] comment=($c . "|u=0");
 }`.trim();
 }
@@ -55,7 +55,7 @@ export function buildVmCleanerScript(hours: OperationalHours = DEFAULT_OPERATION
 # Cek 1: Guard NTP / Validitas Jam Router
 :local d [/system clock get date];
 :local yr 0;
-:if ([:find $d "-"] > 0) do={
+:if ([:typeof [:find $d "-"]] != "nil") do={
   :set yr [:tonum [:pick $d 0 4]];
 } else={
   :set yr [:tonum [:pick $d ([:len $d] - 4) [:len $d]]];
@@ -77,13 +77,13 @@ export function buildVmCleanerScript(hours: OperationalHours = DEFAULT_OPERATION
     :local c [/ip hotspot user get $u comment];
     :local posU [:find $c "|u="];
     :local posV [:find $c "|v="];
-    :if ($posU >= 0 && $posV >= 0) do={
+    :if ([:typeof $posU] != "nil" && [:typeof $posV] != "nil") do={
       :local endV [:find $c "|" ($posV + 3)];
-      :if ($endV < 0) do={ :set endV [:len $c]; }
+      :if ([:typeof $endV] = "nil") do={ :set endV [:len $c]; }
       :local valM [:tonum [:pick $c ($posV + 3) $endV]];
 
       :local endU [:find $c "|" ($posU + 3)];
-      :if ($endU < 0) do={ :set endU [:len $c]; }
+      :if ([:typeof $endU] = "nil") do={ :set endU [:len $c]; }
       :local usedM [:tonum [:pick $c ($posU + 3) $endU]];
       :local newUsed ($usedM + 5);
 
@@ -110,7 +110,7 @@ export function buildVmOpenScript(): string {
   return `# vm-open: Buka hotspot dan bersihkan sisa voucher kemarin
 :foreach u in=[/ip hotspot user find] do={
   :local c [/ip hotspot user get $u comment];
-  :if ([:find $c "vm|"] >= 0 && [:find $c "|u="] >= 0) do={
+  :if ([:typeof [:find $c "vm|"]] != "nil" && [:typeof [:find $c "|u="]] != "nil") do={
     /ip hotspot user remove $u;
   }
 }
@@ -131,7 +131,7 @@ export function buildVmCloseScript(): string {
 } on-error={};
 :foreach u in=[/ip hotspot user find] do={
   :local c [/ip hotspot user get $u comment];
-  :if ([:find $c "vm|"] >= 0 && [:find $c "|u="] >= 0) do={
+  :if ([:typeof [:find $c "vm|"]] != "nil" && [:typeof [:find $c "|u="]] != "nil") do={
     /ip hotspot user remove $u;
   }
 }
@@ -149,10 +149,17 @@ export function escapeRouterOsScript(script: string): string {
 
 /**
  * Normalisasi comment user voucher
- * Format standar: vm|b=<batchId>|p=<price>|v=<validityMinutes>
+ * Format standar: vm|b=<batchId>|p=<price>[|v=<validityMinutes>]
  */
-export function buildVoucherComment(batchId: string, price: number, validityMinutes: number): string {
-  return `vm|b=${batchId}|p=${price}|v=${validityMinutes}`;
+export function buildVoucherComment(
+  batchId: string,
+  price: number,
+  validityMinutes: number | null
+): string {
+  // Tanpa |v= (profil tanpa masa berlaku) voucher tidak dihitung vm-cleaner dan
+  // hanya dibersihkan oleh vm-open / vm-close.
+  const base = `vm|b=${batchId}|p=${price}`;
+  return validityMinutes && validityMinutes > 0 ? `${base}|v=${validityMinutes}` : base;
 }
 
 /**

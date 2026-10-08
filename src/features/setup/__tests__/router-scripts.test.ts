@@ -14,8 +14,10 @@ describe('Router Scripts Generator (KEPUTUSAN TERBARU §5 & §6)', () => {
     const script = buildOnLoginScript();
     expect(script).toContain(':local u $user;');
     expect(script).toContain(':local c [/ip hotspot user get [find name=$u] comment];');
-    expect(script).toContain('[:find $c "vm|"] >= 0');
-    expect(script).toContain('[:find $c "|u="] < 0');
+    // :find mengembalikan nil (bukan -1) jika tidak ketemu, jadi dicek lewat :typeof
+    expect(script).toContain('[:typeof [:find $c "vm|"]] != "nil"');
+    expect(script).toContain('[:typeof [:find $c "|u="]] = "nil"');
+    expect(script).not.toMatch(/\[:find [^\]]+\] *(<|>=|>) *0/);
     expect(script).toContain('comment=($c . "|u=0");');
     // Ensure it does NOT create scheduler per user
     expect(script).not.toContain('/system scheduler add');
@@ -79,5 +81,23 @@ describe('Router Scripts Generator (KEPUTUSAN TERBARU §5 & §6)', () => {
   it('parseVoucherComment returns isVoucher: false for non-mika comments', () => {
     expect(parseVoucherComment('user biasa')).toEqual({ isVoucher: false, hasStarted: false });
     expect(parseVoucherComment(undefined)).toEqual({ isVoucher: false, hasStarted: false });
+  });
+
+  it('semua script nil-safe: tidak membandingkan hasil :find dengan angka', () => {
+    const scripts = [
+      buildOnLoginScript(),
+      buildVmCleanerScript(DEFAULT_OPERATIONAL_HOURS),
+      buildVmOpenScript(),
+      buildVmCloseScript(),
+    ];
+    for (const script of scripts) {
+      // :find mengembalikan nil jika tidak ketemu; perbandingan nil dengan angka tidak bisa diandalkan
+      expect(script).not.toMatch(/\[:find [^\]]+\] *(<|>=|>) *0/);
+      expect(script).not.toMatch(/\$(end[UV]) *< *0/);
+    }
+  });
+
+  it('buildVoucherComment tanpa masa berlaku tidak memuat |v=', () => {
+    expect(buildVoucherComment('b1', 5000, null)).toBe('vm|b=b1|p=5000');
   });
 });

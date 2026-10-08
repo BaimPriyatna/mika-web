@@ -35,6 +35,7 @@ import {
 import { VoucherGenerateDialog } from '../../features/vouchers/VoucherGenerateDialog';
 import {
   generateMultiPlanBatch,
+  PartialBatchError,
   getAllBatches,
   deleteBatch,
   deleteExpiredBatches,
@@ -93,7 +94,16 @@ export function Voucher() {
       throw new Error('Router tidak terhubung');
     }
 
-    const batch = await generateMultiPlanBatch(routerClient, items, samePassword);
+    let batch;
+    try {
+      batch = await generateMultiPlanBatch(routerClient, items, samePassword);
+    } catch (error) {
+      if (error instanceof PartialBatchError) {
+        // Voucher yang berhasil sudah tersimpan: segarkan daftar lalu tampilkan error ke pengguna
+        await loadData();
+      }
+      throw error;
+    }
     await loadData();
     // Buka langsung ke preview cetak sesuai KEPUTUSAN TERBARU §9
     navigate(`/voucher/cetak/${batch.id}`);

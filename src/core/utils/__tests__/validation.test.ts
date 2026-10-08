@@ -59,3 +59,29 @@ describe('Validation Helpers & Duration Constraints (KEPUTUSAN TERBARU §4)', ()
     expect(sanitized).toBe('test\\"with\\$var\\nnewline\\\\slash');
   });
 });
+
+import { parseRouterDurationToMinutes } from '../validation';
+
+describe('parseRouterDurationToMinutes', () => {
+  it('membaca format ringkas RouterOS', () => {
+    expect(parseRouterDurationToMinutes('1h')).toBe(60);
+    expect(parseRouterDurationToMinutes('45m')).toBe(45);
+    expect(parseRouterDurationToMinutes('1h30m')).toBe(90);
+    expect(parseRouterDurationToMinutes('7h')).toBe(420);
+  });
+
+  it('membaca format HH:MM:SS dan D:HH:MM:SS', () => {
+    expect(parseRouterDurationToMinutes('01:00:00')).toBe(60);
+    expect(parseRouterDurationToMinutes('00:30:00')).toBe(30);
+    expect(parseRouterDurationToMinutes('1:02:00:00')).toBe(26 * 60);
+  });
+
+  it('mengembalikan null untuk kosong, none, 0s, atau tidak dikenal', () => {
+    expect(parseRouterDurationToMinutes(undefined)).toBeNull();
+    expect(parseRouterDurationToMinutes('')).toBeNull();
+    expect(parseRouterDurationToMinutes('none')).toBeNull();
+    expect(parseRouterDurationToMinutes('0s')).toBeNull();
+    expect(parseRouterDurationToMinutes('abc')).toBeNull();
+    expect(parseRouterDurationToMinutes('12:30')).toBeNull();
+  });
+});
