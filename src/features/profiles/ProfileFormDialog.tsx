@@ -40,23 +40,21 @@ interface ProfileFormDialogProps {
   }) => Promise<void>;
 }
 
-// Unit untuk masa berlaku
-type ValidityUnit = 'menit' | 'jam' | 'hari' | 'minggu';
+// Unit untuk masa berlaku (KEPUTUSAN TERBARU §4: menit dan jam saja, maks 7 jam)
+type ValidityUnit = 'menit' | 'jam';
 
 const UNIT_TO_ROUTERS: Record<ValidityUnit, (n: number) => string> = {
   menit: n => `${n}m`,
   jam: n => `${n}h`,
-  hari: n => `${n}d`,
-  minggu: n => `${n}w`,
 };
 
 const ROUTERS_TO_UNIT = (validity: string): { value: number; unit: ValidityUnit } | null => {
-  const match = validity.match(/^(\d+)([smhdw])$/);
+  const match = validity.match(/^(\d+)([mh])$/);
   if (!match) return null;
   const num = parseInt(match[1]);
   const unitChar = match[2];
   const map: Record<string, ValidityUnit> = {
-    m: 'menit', h: 'jam', d: 'hari', w: 'minggu',
+    m: 'menit', h: 'jam',
   };
   return { value: num, unit: map[unitChar] || 'jam' };
 };
@@ -202,11 +200,12 @@ export function ProfileFormDialog({
         setError('Nilai masa berlaku harus angka positif');
         return;
       }
-      validity = UNIT_TO_ROUTERS[validityUnit](valNum);
-      if (!isValidDuration(validity)) {
-        setError('Format masa berlaku tidak valid');
+      const totalMinutes = validityUnit === 'jam' ? valNum * 60 : valNum;
+      if (totalMinutes > 420) {
+        setError('Masa berlaku profil maksimal 7 jam (420 menit)');
         return;
       }
+      validity = UNIT_TO_ROUTERS[validityUnit](valNum);
     }
 
     // Validasi opsi lanjutan jika diisi
@@ -391,8 +390,6 @@ export function ProfileFormDialog({
                   >
                     <option value="menit">menit</option>
                     <option value="jam">jam</option>
-                    <option value="hari">hari</option>
-                    <option value="minggu">minggu</option>
                   </select>
                 </div>
               ) : (
@@ -403,7 +400,7 @@ export function ProfileFormDialog({
               <p className="text-xs text-gray-500 mt-1.5">
                 <span className="font-mono text-gray-700 dark:text-gray-300">{validityPreview}</span>
                 {' · '}
-                Dihitung sejak login pertama, terus berjalan walau perangkat terputus
+                Dihitung sejak login pertama (maks. 7 jam), terus berjalan walau perangkat terputus
               </p>
             </div>
 

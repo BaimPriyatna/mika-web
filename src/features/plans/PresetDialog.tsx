@@ -21,7 +21,7 @@ import { Label } from '../../components/ui/label';
 interface PresetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  presetType: '1h' | '3h' | '1d' | '1w' | '1m' | null;
+  presetType: '1h' | '3h' | '5h' | '7h' | null;
   onConfirm: (data: {
     label: string;
     profileName: string;
@@ -49,29 +49,21 @@ const PRESET_CONFIGS = {
     downloadSpeed: '2M',
     suggestedPrice: 5000,
   },
-  '1d': {
-    label: 'Paket 1 Hari',
-    profileName: '1hari-2mbps',
-    validity: '1d',
+  '5h': {
+    label: 'Paket 5 Jam',
+    profileName: '5jam-2mbps',
+    validity: '5h',
+    uploadSpeed: '1M',
+    downloadSpeed: '2M',
+    suggestedPrice: 8000,
+  },
+  '7h': {
+    label: 'Paket 7 Jam',
+    profileName: '7jam-2mbps',
+    validity: '7h',
     uploadSpeed: '1M',
     downloadSpeed: '2M',
     suggestedPrice: 10000,
-  },
-  '1w': {
-    label: 'Paket 1 Minggu',
-    profileName: '1minggu-2mbps',
-    validity: '1w',
-    uploadSpeed: '1M',
-    downloadSpeed: '2M',
-    suggestedPrice: 50000,
-  },
-  '1m': {
-    label: 'Paket 1 Bulan',
-    profileName: '1bulan-2mbps',
-    validity: '30d',
-    uploadSpeed: '1M',
-    downloadSpeed: '2M',
-    suggestedPrice: 150000,
   },
 } as const;
 

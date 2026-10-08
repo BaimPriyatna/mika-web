@@ -75,11 +75,12 @@ const DialogHeader = ({ children, onClose }: DialogHeaderProps) => {
 
 interface DialogTitleProps {
   children: React.ReactNode
+  className?: string
 }
 
-const DialogTitle = ({ children }: DialogTitleProps) => {
+const DialogTitle = ({ children, className = '' }: DialogTitleProps) => {
   return (
-    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+    <h2 className={`text-lg font-semibold text-gray-900 dark:text-gray-100 ${className}`}>
       {children}
     </h2>
   )
@@ -87,11 +88,12 @@ const DialogTitle = ({ children }: DialogTitleProps) => {
 
 interface DialogDescriptionProps {
   children: React.ReactNode
+  className?: string
 }
 
-const DialogDescription = ({ children }: DialogDescriptionProps) => {
+const DialogDescription = ({ children, className = '' }: DialogDescriptionProps) => {
   return (
-    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+    <p className={`text-sm text-gray-600 dark:text-gray-400 mt-1 ${className}`}>
       {children}
     </p>
   )

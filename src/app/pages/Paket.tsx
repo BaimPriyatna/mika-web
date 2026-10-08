@@ -32,12 +32,7 @@ export function Paket() {
   const [showFormDialog, setShowFormDialog] = useState(false);
   const [editingPlan, setEditingPlan] = useState<VoucherPlan | undefined>();
   const [showPresetDialog, setShowPresetDialog] = useState(false);
-  const [presetType, setPresetType] = useState<'1h' | '3h' | '1d' | '1w' | '1m' | null>(null);
-
-  // Load data
-  useEffect(() => {
-    loadData();
-  }, [client]);
+  const [presetType, setPresetType] = useState<'1h' | '3h' | '5h' | '7h' | null>(null);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -60,6 +55,10 @@ export function Paket() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadData();
+  }, [client]);
 
   const handleCreatePlan = async (data: {
     label: string;
@@ -103,7 +102,7 @@ export function Paket() {
     }
   };
 
-  const handleOpenPreset = (type: '1h' | '3h' | '1d' | '1w' | '1m') => {
+  const handleOpenPreset = (type: '1h' | '3h' | '5h' | '7h') => {
     setPresetType(type);
     setShowPresetDialog(true);
   };
@@ -209,22 +208,16 @@ export function Paket() {
             3 Jam
           </button>
           <button
-            onClick={() => handleOpenPreset('1d')}
+            onClick={() => handleOpenPreset('5h')}
             className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 text-sm rounded-md transition-colors"
           >
-            1 Hari
+            5 Jam
           </button>
           <button
-            onClick={() => handleOpenPreset('1w')}
+            onClick={() => handleOpenPreset('7h')}
             className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 text-sm rounded-md transition-colors"
           >
-            1 Minggu
-          </button>
-          <button
-            onClick={() => handleOpenPreset('1m')}
-            className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 text-sm rounded-md transition-colors"
-          >
-            1 Bulan
+            7 Jam
           </button>
         </div>
       </div>

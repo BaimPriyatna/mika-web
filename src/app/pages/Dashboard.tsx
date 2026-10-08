@@ -8,12 +8,15 @@ import {
   Ticket,
   Plus,
   ArrowRight,
-  Radio,
   RefreshCw,
   CheckCircle2,
+  Printer,
+  Radio,
 } from 'lucide-react';
 import { useRouterStore } from '../../stores/router-store';
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { db, type VoucherBatch } from '../../core/db/schema';
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -26,6 +29,23 @@ export function Dashboard() {
   } = useRouterStore();
 
   const isConnected = connectionStatus === 'connected';
+
+  const [latestBatch, setLatestBatch] = useState<VoucherBatch | null>(null);
+
+  useEffect(() => {
+    db.batches.orderBy('createdAt').reverse().first().then(b => setLatestBatch(b || null));
+  }, []);
+
+  // Auto-refresh overview every 10 seconds when tab is visible
+  useEffect(() => {
+    if (!isConnected) return;
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        fetchOverview();
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [isConnected, fetchOverview]);
 
   // Calculate RAM usage
   let ramUsagePercent = 0;
@@ -63,6 +83,16 @@ export function Dashboard() {
             >
               <RefreshCw className="w-3.5 h-3.5" />
               Segarkan
+            </button>
+          )}
+
+          {latestBatch && latestBatch.id && (
+            <button
+              onClick={() => navigate(`/voucher/cetak/${latestBatch.id}`)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950/60 hover:bg-green-100 dark:hover:bg-green-900 border border-green-200 dark:border-green-800 rounded-lg transition-colors shadow-2xs"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              Cetak Batch Terakhir
             </button>
           )}
 

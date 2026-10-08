@@ -11,9 +11,39 @@
 export function isValidDuration(duration: string): boolean {
   if (!duration) return false;
   
-  // Pattern: kombinasi angka + unit
+  // Pattern: kombinasi angka + unit (s/m/h/d/w)
   const pattern = /^(\d+[smhdw])+$/;
   return pattern.test(duration);
+}
+
+/**
+ * Parse durasi RouterOS (mis. "30m", "1h", "2h30m") ke total menit
+ */
+export function parseDurationToMinutes(duration: string): number | null {
+  if (!duration) return null;
+  const match = duration.match(/^(\d+h)?(\d+m)?$/);
+  if (!match || (!match[1] && !match[2])) return null;
+
+  let total = 0;
+  if (match[1]) {
+    total += parseInt(match[1].replace('h', ''), 10) * 60;
+  }
+  if (match[2]) {
+    total += parseInt(match[2].replace('m', ''), 10);
+  }
+  return total;
+}
+
+/**
+ * Validasi masa berlaku profil hotspot (KEPUTUSAN TERBARU §4)
+ * - Maksimal 7 jam (420 menit)
+ * - Satuan menit dan jam saja (mis. "30m", "1h", "3h", "5h", "7h")
+ */
+export function isValidProfileDuration(duration: string): boolean {
+  if (!duration) return true; // Opsional
+  const minutes = parseDurationToMinutes(duration);
+  if (minutes === null) return false;
+  return minutes > 0 && minutes <= 420; // 7 jam = 420 menit
 }
 
 /**

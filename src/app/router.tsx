@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import { AppLayout } from './layout/AppLayout';
 import { Dashboard } from './pages/Dashboard';
 import { Voucher } from './pages/Voucher';
+import { CetakVoucher } from './pages/CetakVoucher';
 import { Paket } from './pages/Paket';
 import { Profil } from './pages/Profil';
 import { Perangkat } from './pages/Perangkat';
@@ -20,6 +21,10 @@ export const router = createBrowserRouter([
       {
         path: 'voucher',
         element: <Voucher />,
+      },
+      {
+        path: 'voucher/cetak/:batchId',
+        element: <CetakVoucher />,
       },
       {
         path: 'paket',

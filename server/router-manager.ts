@@ -45,7 +45,7 @@ export class RouterManager {
     this.currentConfig = req;
 
     const protocol = req.protocol || 'auto';
-    let errors: string[] = [];
+    const errors: string[] = [];
 
     // Helper: try Binary API
     const tryBinary = async (): Promise<RouterSystemResource> => {

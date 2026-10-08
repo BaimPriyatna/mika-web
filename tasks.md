@@ -381,13 +381,13 @@
 **Estimasi:** 2 hari  
 **Dependencies:** —  
 **Sub-tasks:**
-- [~] 4.1.1 Buat `src/features/pdf/voucher-template.ts`: konstanta BRAND, COLORS, VOUCHER, LAYOUT_D (sesuai DESIGN.md §5)
-- [~] 4.1.2 Definisikan koordinat voucher Desain D: header (h=17), merek (x=4, t=5.5), harga (x=4, t=14, size=22), durasi (xRight=4, t=14, size=14), dll
-- [~] 4.1.3 Buat `src/core/utils/units.ts`: konversi mm → pt (`const MM = 72 / 25.4`)
-- [~] 4.1.4 Buat `src/features/pdf/layout.ts`: fungsi `calculateLayout(marginY)` untuk hitung `gapY` dan posisi grid 2×4
-- [~] 4.1.5 Formula: `gapY = (pageH - 2*marginY - 4*voucherH) / 3`, validasi `gapY >= 0`
-- [~] 4.1.6 Fungsi posisi voucher: `getVoucherPosition(row, col, marginY)` return `{x, y}` (origin kiri-bawah pdf-lib)
-- [~] 4.1.7 Unit test: cek posisi dengan marginY default (15mm), cek validasi marginY (gapY < 0 throw error)
+- [x] 4.1.1 Buat `src/features/pdf/voucher-template.ts`: konstanta BRAND, COLORS, VOUCHER, LAYOUT_D (sesuai DESIGN.md §5)
+- [x] 4.1.2 Definisikan koordinat voucher Desain D: header (h=17), merek (x=4, t=5.5), harga (x=4, t=14, size=22), durasi (xRight=4, t=14, size=14), dll
+- [x] 4.1.3 Buat `src/core/utils/units.ts`: konversi mm → pt (`const MM = 72 / 25.4`)
+- [x] 4.1.4 Buat `src/features/pdf/layout.ts`: fungsi `calculateLayout(marginY)` untuk hitung `gapY` dan posisi grid 2×4
+- [x] 4.1.5 Formula: `gapY = (pageH - 2*marginY - 4*voucherH) / 3`, validasi `gapY >= 0`
+- [x] 4.1.6 Fungsi posisi voucher: `getVoucherPosition(row, col, marginY)` return `{x, y}` (origin kiri-bawah pdf-lib)
+- [x] 4.1.7 Unit test: cek posisi dengan marginY default (15mm), cek validasi marginY (gapY < 0 throw error)
 
 **Acceptance Criteria:**
 - Konstanta layout sesuai DESIGN.md §5
@@ -401,20 +401,20 @@
 **Estimasi:** 3 hari  
 **Dependencies:** 4.1, 3.2  
 **Sub-tasks:**
-- [~] 4.2.1 Buat `src/features/pdf/renderer.ts`: fungsi `renderVoucherPdf(batch, plan, settings)`
-- [~] 4.2.2 Load font: embed Inter (regular, bold) dan JetBrains Mono
-- [~] 4.2.3 Create page A4 portrait (210×297mm)
-- [~] 4.2.4 Loop voucher (maks 8): hitung posisi dengan `getVoucherPosition(row, col)`, draw voucher
-- [~] 4.2.5 Draw voucher: background (header hitam jika mode berwarna, putih jika hemat tinta), border, radius
-- [~] 4.2.6 Draw teks: merek, label paket, harga (22pt bold putih), durasi (14pt bold hijau `#4ADE80`)
-- [~] 4.2.7 Draw username/password: label (6pt abu), nilai (14pt mono bold, 6 karakter)
-- [~] 4.2.8 Draw garis pemisah (0.5pt), info masa berlaku, kecepatan, catatan
-- [~] 4.2.9 Generate QR code (20×20mm): URL login dengan `?username=X&password=Y`, embed sebagai PNG
-- [~] 4.2.10 QR posisi (x=61, t=22), quiet zone 1.5mm, koreksi level M
-- [~] 4.2.11 Draw caption QR: "Scan untuk login" (6pt abu)
-- [~] 4.2.12 Garis potong opsional (putus-putus 0.3pt abu) jika `settings.showCutLines`
-- [~] 4.2.13 Mode hemat tinta: header tanpa blok hitam, hanya garis bawah, semua teks hitam (tanpa hijau)
-- [~] 4.2.14 Return `pdfDoc.save()` sebagai `Uint8Array`
+- [x] 4.2.1 Buat `src/features/pdf/renderer.ts`: fungsi `renderVoucherPdf(batch, plan, settings)`
+- [x] 4.2.2 Load font: embed Inter (regular, bold) dan JetBrains Mono
+- [x] 4.2.3 Create page A4 portrait (210×297mm)
+- [x] 4.2.4 Loop voucher (maks 8): hitung posisi dengan `getVoucherPosition(row, col)`, draw voucher
+- [x] 4.2.5 Draw voucher: background (header hitam jika mode berwarna, putih jika hemat tinta), border, radius
+- [x] 4.2.6 Draw teks: merek, label paket, harga (22pt bold putih), durasi (14pt bold hijau `#4ADE80`)
+- [x] 4.2.7 Draw username/password: label (6pt abu), nilai (14pt mono bold, 6 karakter)
+- [x] 4.2.8 Draw garis pemisah (0.5pt), info masa berlaku, kecepatan, catatan
+- [x] 4.2.9 Generate QR code (20×20mm): URL login dengan `?username=X&password=Y`, embed sebagai PNG
+- [x] 4.2.10 QR posisi (x=61, t=22), quiet zone 1.5mm, koreksi level M
+- [x] 4.2.11 Draw caption QR: "Scan untuk login" (6pt abu)
+- [x] 4.2.12 Garis potong opsional (putus-putus 0.3pt abu) jika `settings.showCutLines`
+- [x] 4.2.13 Mode hemat tinta: header tanpa blok hitam, hanya garis bawah, semua teks hitam (tanpa hijau)
+- [x] 4.2.14 Return `pdfDoc.save()` sebagai `Uint8Array`
 
 **Acceptance Criteria:**
 - PDF ter-generate dengan 8 voucher (atau kurang) dalam layout 2×4
@@ -430,16 +430,16 @@
 **Estimasi:** 2 hari  
 **Dependencies:** 4.2  
 **Sub-tasks:**
-- [~] 4.3.1 Buat halaman `/voucher/cetak/:batchId` dengan pratinjau PDF
-- [~] 4.3.2 Render PDF ke canvas atau embed sebagai blob URL (`URL.createObjectURL`)
-- [~] 4.3.3 Header: "Batch: 06 Okt 14:02 · Paket 1 Hari · 8 voucher · 1 halaman"
-- [~] 4.3.4 Kontrol: checkbox "Mode hemat tinta", "Garis potong"
-- [~] 4.3.5 Offset printer: input X/Y (default 0.0mm), tombol "Halaman kalibrasi"
-- [~] 4.3.6 Halaman kalibrasi: PDF dengan kotak 85×54mm, penggaris margin 10mm, instruksi
-- [~] 4.3.7 Tombol "Unduh PDF": download dengan nama `voucher-<batchId>.pdf`
-- [~] 4.3.8 Tombol "Cetak": `window.print()` dengan media query `@media print { scale: 100% }`
-- [~] 4.3.9 Setelah cetak/unduh: dialog "Tandai batch sudah dicetak?" (default centang), update `printedAt` di Dexie
-- [~] 4.3.10 Re-generate pratinjau saat toggle mode hemat tinta atau garis potong
+- [x] 4.3.1 Buat halaman `/voucher/cetak/:batchId` dengan pratinjau PDF
+- [x] 4.3.2 Render PDF ke canvas atau embed sebagai blob URL (`URL.createObjectURL`)
+- [x] 4.3.3 Header: "Batch: 06 Okt 14:02 · Paket 1 Hari · 8 voucher · 1 halaman"
+- [x] 4.3.4 Kontrol: checkbox "Mode hemat tinta", "Garis potong"
+- [x] 4.3.5 Offset printer: input X/Y (default 0.0mm), tombol "Halaman kalibrasi"
+- [x] 4.3.6 Halaman kalibrasi: PDF dengan kotak 85×54mm, penggaris margin 10mm, instruksi
+- [x] 4.3.7 Tombol "Unduh PDF": download dengan nama `voucher-<batchId>.pdf`
+- [x] 4.3.8 Tombol "Cetak": `window.print()` dengan media query `@media print { scale: 100% }`
+- [x] 4.3.9 Setelah cetak/unduh: dialog "Tandai batch sudah dicetak?" (default centang), update `printedAt` di Dexie
+- [x] 4.3.10 Re-generate pratinjau saat toggle mode hemat tinta atau garis potong
 
 **Acceptance Criteria:**
 - Pratinjau tampil dengan PDF yang benar (1 halaman)
@@ -457,13 +457,13 @@
 **Estimasi:** 2 hari  
 **Dependencies:** 1.4  
 **Sub-tasks:**
-- [~] 5.1.1 Buat `src/features/leases/lease-service.ts`: fungsi `listDhcpLeases()`, `listHotspotActive()`, `listHotspotHost()`
-- [~] 5.1.2 Setup TanStack Query dengan `refetchInterval` (10 detik), pause saat tab tidak aktif (`refetchOnWindowFocus`)
-- [~] 5.1.3 Implementasi `listDhcpLeases()`: baca `/ip/dhcp-server/lease`, map field (IP, MAC, hostname, server, status, last-seen)
-- [~] 5.1.4 Implementasi `listHotspotActive()`: baca `/ip/hotspot/active`, map field (user, IP, MAC, uptime, bytes in/out)
-- [~] 5.1.5 Hitung sisa masa berlaku dari scheduler: baca `/system/scheduler` untuk `vm-<user>`, ambil `next-run` atau hitung dari comment `start=`
-- [~] 5.1.6 Implementasi `listHotspotHost()`: baca `/ip/hotspot/host`, map field
-- [~] 5.1.7 Fungsi `kickUser(id)`: panggil `/ip/hotspot/active/remove =.id=<id>`
+- [x] 5.1.1 Buat `src/features/leases/lease-service.ts`: fungsi `listDhcpLeases()`, `listHotspotActive()`, `listHotspotHost()`
+- [x] 5.1.2 Setup TanStack Query dengan `refetchInterval` (10 detik), pause saat tab tidak aktif (`refetchOnWindowFocus`)
+- [x] 5.1.3 Implementasi `listDhcpLeases()`: baca `/ip/dhcp-server/lease`, map field (IP, MAC, hostname, server, status, last-seen)
+- [x] 5.1.4 Implementasi `listHotspotActive()`: baca `/ip/hotspot/active`, map field (user, IP, MAC, uptime, bytes in/out)
+- [x] 5.1.5 Hitung sisa masa berlaku dari scheduler: baca `/system/scheduler` untuk `vm-<user>`, ambil `next-run` atau hitung dari comment `start=`
+- [x] 5.1.6 Implementasi `listHotspotHost()`: baca `/ip/hotspot/host`, map field
+- [x] 5.1.7 Fungsi `kickUser(id)`: panggil `/ip/hotspot/active/remove =.id=<id>`
 
 **Acceptance Criteria:**
 - List DHCP lease, hotspot active, host berfungsi
@@ -477,16 +477,16 @@
 **Estimasi:** 2 hari  
 **Dependencies:** 5.1  
 **Sub-tasks:**
-- [~] 5.2.1 Buat halaman `/perangkat` dengan tab: DHCP Lease, Hotspot Aktif, Host
-- [~] 5.2.2 Tabel DHCP Lease: kolom IP, MAC, Hostname, Server, Status, Terakhir terlihat, Aksi (Jadikan statis, Blokir)
-- [~] 5.2.3 Tabel Hotspot Aktif: kolom User, IP, MAC, Uptime, Sisa masa berlaku, ↓/↑ (bytes), Aksi (Kick)
-- [~] 5.2.4 Tabel Host: kolom IP, MAC, Status, Autentikasi
-- [~] 5.2.5 Kotak pencarian di atas tabel: filter IP/MAC/hostname/user (client-side)
-- [~] 5.2.6 Indikator "Diperbarui 3 dtk lalu" dengan tombol jeda auto-refresh (pause query)
-- [~] 5.2.7 Sorting di semua kolom (client-side), kolom IP diurutkan numerik (bukan string)
-- [~] 5.2.8 Tombol "Kick" di baris hotspot aktif: popover konfirmasi ringan "Putuskan user X?", panggil `kickUser()`
-- [~] 5.2.9 Kolom sisa masa berlaku: warna kuning jika < 1 jam, merah jika < 10 menit
-- [~] 5.2.10 State loading (skeleton) dan error (retry)
+- [x] 5.2.1 Buat halaman `/perangkat` dengan tab: DHCP Lease, Hotspot Aktif, Host
+- [x] 5.2.2 Tabel DHCP Lease: kolom IP, MAC, Hostname, Server, Status, Terakhir terlihat, Aksi (Jadikan statis, Blokir)
+- [x] 5.2.3 Tabel Hotspot Aktif: kolom User, IP, MAC, Uptime, Sisa masa berlaku, ↓/↑ (bytes), Aksi (Kick)
+- [x] 5.2.4 Tabel Host: kolom IP, MAC, Status, Autentikasi
+- [x] 5.2.5 Kotak pencarian di atas tabel: filter IP/MAC/hostname/user (client-side)
+- [x] 5.2.6 Indikator "Diperbarui 3 dtk lalu" dengan tombol jeda auto-refresh (pause query)
+- [x] 5.2.7 Sorting di semua kolom (client-side), kolom IP diurutkan numerik (bukan string)
+- [x] 5.2.8 Tombol "Kick" di baris hotspot aktif: popover konfirmasi ringan "Putuskan user X?", panggil `kickUser()`
+- [x] 5.2.9 Kolom sisa masa berlaku: warna kuning jika < 1 jam, merah jika < 10 menit
+- [x] 5.2.10 State loading (skeleton) dan error (retry)
 
 **Acceptance Criteria:**
 - Tab switching smooth
@@ -503,9 +503,9 @@
 **Estimasi:** 1 hari  
 **Dependencies:** 5.2  
 **Sub-tasks:**
-- [~] 5.3.1 Implementasi "Jadikan statis": update lease dengan `make-static=yes`
-- [~] 5.3.2 Implementasi "Blokir": disable lease atau buat ip-binding dengan `blocked=yes`
-- [~] 5.3.3 Dialog konfirmasi dengan penjelasan dampak
+- [x] 5.3.1 Implementasi "Jadikan statis": update lease dengan `make-static=yes`
+- [x] 5.3.2 Implementasi "Blokir": disable lease atau buat ip-binding dengan `blocked=yes`
+- [x] 5.3.3 Dialog konfirmasi dengan penjelasan dampak
 
 **Acceptance Criteria:**
 - Lease bisa dijadikan statis

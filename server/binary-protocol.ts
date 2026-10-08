@@ -54,8 +54,8 @@ export function decodeWord(buffer: Buffer, offset: number): DecodedWord | null {
   }
 
   const b0 = buffer[offset];
-  let length = 0;
-  let lenBytes = 0;
+  let length: number;
+  let lenBytes: number;
 
   if ((b0 & 0x80) === 0x00) {
     length = b0;

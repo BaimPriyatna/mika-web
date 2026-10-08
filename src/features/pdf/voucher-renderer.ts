@@ -13,6 +13,7 @@ import {
   COLS,
   ROWS,
   MARGIN_X_MM,
+  MARGIN_Y_MM,
   VOUCHER_LAYOUT,
   COLOR_MODE,
   mmToPt,
@@ -393,7 +394,7 @@ export async function generateVoucherPDF(
  * Download PDF
  */
 export function downloadPDF(pdfBytes: Uint8Array, filename: string): void {
-  const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+  const blob = new Blob([pdfBytes as unknown as BlobPart], { type: 'application/pdf' });
   const url = URL.createObjectURL(blob);
   
   const link = document.createElement('a');
@@ -408,6 +409,211 @@ export function downloadPDF(pdfBytes: Uint8Array, filename: string): void {
  * Generate data URL untuk preview
  */
 export function pdfBytesToDataUrl(pdfBytes: Uint8Array): string {
-  const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+  const blob = new Blob([pdfBytes as unknown as BlobPart], { type: 'application/pdf' });
   return URL.createObjectURL(blob);
 }
+
+/**
+ * Generate PDF halaman kalibrasi printer
+ * Sesuai Task 4.3.6 & DESIGN.md §4.6
+ */
+export async function generateCalibrationPDF(offset: { offsetX?: number; offsetY?: number } = {}): Promise<Uint8Array> {
+  const offsetX = offset.offsetX || 0;
+  const offsetY = offset.offsetY || 0;
+
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([mmToPt(A4_WIDTH_MM), mmToPt(A4_HEIGHT_MM)]);
+
+  const regularFont = await pdfDoc.embedFont('Helvetica');
+  const boldFont = await pdfDoc.embedFont('Helvetica-Bold');
+  const monoFont = await pdfDoc.embedFont('Courier-Bold');
+
+  const pageW = mmToPt(A4_WIDTH_MM);
+  const pageH = mmToPt(A4_HEIGHT_MM);
+
+  // Judul & Header
+  page.drawText('HALAMAN KALIBRASI PRINTER (A4)', {
+    x: mmToPt(20),
+    y: pageH - mmToPt(25),
+    size: 16,
+    font: boldFont,
+    color: rgb(0.1, 0.1, 0.1),
+  });
+
+  page.drawText('MikroTik Hotspot Voucher Manager · Cetak pada Skala 100% / Actual Size', {
+    x: mmToPt(20),
+    y: pageH - mmToPt(32),
+    size: 9,
+    font: regularFont,
+    color: rgb(0.4, 0.4, 0.4),
+  });
+
+  // Garis batas Margin Kiri (10 mm tetap)
+  const leftMarginX = mmToPt(MARGIN_X_MM + offsetX);
+  page.drawLine({
+    start: { x: leftMarginX, y: mmToPt(10) },
+    end: { x: leftMarginX, y: pageH - mmToPt(10) },
+    thickness: 1,
+    color: rgb(0.1, 0.4, 0.8),
+  });
+
+  page.drawText('<-- 10 mm (Margin Kiri) -->', {
+    x: leftMarginX + mmToPt(2),
+    y: pageH - mmToPt(40),
+    size: 8,
+    font: boldFont,
+    color: rgb(0.1, 0.4, 0.8),
+  });
+
+  // Garis batas Margin Kanan (10 mm tetap)
+  const rightMarginX = mmToPt(A4_WIDTH_MM - MARGIN_X_MM + offsetX);
+  page.drawLine({
+    start: { x: rightMarginX, y: mmToPt(10) },
+    end: { x: rightMarginX, y: pageH - mmToPt(10) },
+    thickness: 1,
+    color: rgb(0.1, 0.4, 0.8),
+  });
+
+  page.drawText('<-- 10 mm (Margin Kanan) -->', {
+    x: rightMarginX - mmToPt(45),
+    y: pageH - mmToPt(40),
+    size: 8,
+    font: boldFont,
+    color: rgb(0.1, 0.4, 0.8),
+  });
+
+  // Posisi kotak kalibrasi (slot voucher 1: baris 0, kolom 0)
+  const pos0 = getVoucherPosition(0, MARGIN_Y_MM, offsetX, offsetY);
+  const boxW = mmToPt(VOUCHER_WIDTH_MM);
+  const boxH = mmToPt(VOUCHER_HEIGHT_MM);
+
+  // Gambar Kotak Uji Voucher (85 x 54 mm)
+  page.drawRectangle({
+    x: pos0.x,
+    y: pos0.y,
+    width: boxW,
+    height: boxH,
+    borderColor: rgb(0.15, 0.15, 0.15),
+    borderWidth: 1.5,
+    color: rgb(0.97, 0.98, 0.99),
+  });
+
+  // Crosshair tengah kotak
+  page.drawLine({
+    start: { x: pos0.x + boxW / 2 - mmToPt(5), y: pos0.y + boxH / 2 },
+    end: { x: pos0.x + boxW / 2 + mmToPt(5), y: pos0.y + boxH / 2 },
+    thickness: 0.5,
+    color: rgb(0.5, 0.5, 0.5),
+  });
+  page.drawLine({
+    start: { x: pos0.x + boxW / 2, y: pos0.y + boxH / 2 - mmToPt(5) },
+    end: { x: pos0.x + boxW / 2, y: pos0.y + boxH / 2 + mmToPt(5) },
+    thickness: 0.5,
+    color: rgb(0.5, 0.5, 0.5),
+  });
+
+  page.drawText('KOTAK UJI UKURAN VOUCHER', {
+    x: pos0.x + mmToPt(5),
+    y: pos0.y + boxH - mmToPt(10),
+    size: 11,
+    font: boldFont,
+    color: rgb(0.1, 0.1, 0.1),
+  });
+
+  page.drawText('Lebar harus tepat: 85,0 mm', {
+    x: pos0.x + mmToPt(5),
+    y: pos0.y + boxH - mmToPt(18),
+    size: 9,
+    font: monoFont,
+    color: rgb(0.2, 0.5, 0.2),
+  });
+
+  page.drawText('Tinggi harus tepat: 54,0 mm', {
+    x: pos0.x + mmToPt(5),
+    y: pos0.y + boxH - mmToPt(25),
+    size: 9,
+    font: monoFont,
+    color: rgb(0.2, 0.5, 0.2),
+  });
+
+  page.drawText(`Offset Aktif: X = ${offsetX.toFixed(1)} mm, Y = ${offsetY.toFixed(1)} mm`, {
+    x: pos0.x + mmToPt(5),
+    y: pos0.y + boxH - mmToPt(34),
+    size: 8,
+    font: regularFont,
+    color: rgb(0.3, 0.3, 0.3),
+  });
+
+  // Kotak kedua di sebelah kanan (slot voucher 2: baris 0, kolom 1)
+  const pos1 = getVoucherPosition(1, MARGIN_Y_MM, offsetX, offsetY);
+  page.drawRectangle({
+    x: pos1.x,
+    y: pos1.y,
+    width: boxW,
+    height: boxH,
+    borderColor: rgb(0.6, 0.6, 0.6),
+    borderWidth: 1,
+    borderDashArray: [4, 4],
+  });
+
+  page.drawText('Slot Voucher #2 (85 x 54 mm)', {
+    x: pos1.x + mmToPt(8),
+    y: pos1.y + boxH / 2,
+    size: 10,
+    font: boldFont,
+    color: rgb(0.4, 0.4, 0.4),
+  });
+
+  // Kotak Petunjuk Kalibrasi di bagian bawah
+  const guideY = mmToPt(75);
+  page.drawRectangle({
+    x: mmToPt(20),
+    y: guideY,
+    width: pageW - mmToPt(40),
+    height: mmToPt(65),
+    borderColor: rgb(0.8, 0.8, 0.8),
+    borderWidth: 1,
+    color: rgb(0.98, 0.98, 0.98),
+  });
+
+  page.drawText('PANDUAN KALIBRASI & PENGUKURAN:', {
+    x: mmToPt(25),
+    y: guideY + mmToPt(55),
+    size: 10,
+    font: boldFont,
+    color: rgb(0.1, 0.1, 0.1),
+  });
+
+  const instructions = [
+    '1. Pastikan mencetak dengan skala 100% ("Ukuran sebenarnya" / "Actual size"). Jangan pilih "Fit to page".',
+    '2. Ukur kotak uji di atas dengan penggaris fisik presisi (milimeter). Panjang harus 85 mm, tinggi 54 mm.',
+    '3. Ukur jarak dari tepi kiri kertas ke garis vertikal biru: harus tepat 10 mm.',
+    '4. Jika posisi cetak bergeser pada printer Anda:',
+    '   - Terlalu ke kanan: masukkan nilai minus pada Offset X (misal: -1.5 mm)',
+    '   - Terlalu ke kiri: masukkan nilai plus pada Offset X (misal: +1.5 mm)',
+    '   - Terlalu ke bawah: masukkan nilai plus pada Offset Y (misal: +2.0 mm)',
+    '   - Terlalu ke atas: masukkan nilai minus pada Offset Y (misal: -2.0 mm)',
+  ];
+
+  instructions.forEach((line, idx) => {
+    page.drawText(line, {
+      x: mmToPt(25),
+      y: guideY + mmToPt(45) - idx * mmToPt(5.5),
+      size: 7.5,
+      font: regularFont,
+      color: rgb(0.2, 0.2, 0.2),
+    });
+  });
+
+  // Footer
+  page.drawText('MikroTik Hotspot Voucher Manager · Dicetak pada: ' + new Date().toLocaleDateString('id-ID'), {
+    x: mmToPt(20),
+    y: mmToPt(15),
+    size: 7,
+    font: regularFont,
+    color: rgb(0.6, 0.6, 0.6),
+  });
+
+  return await pdfDoc.save();
+}
+

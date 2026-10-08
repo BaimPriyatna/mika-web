@@ -378,3 +378,132 @@ export async function recoverBatchesFromRouter(
 
   return recoveredBatches;
 }
+
+export interface BatchStatusSummary {
+  newCount: number;
+  activeCount: number;
+  expiredCount: number;
+  isAllExpired: boolean;
+}
+
+/**
+ * Cek status voucher dalam batch terhadap router
+ * Status:
+ * - Baru: user masih ada di router dan belum login (tidak ada |u= di comment)
+ *   // TODO (KEPUTUSAN TERBARU §10): masa berlaku voucher yang belum pernah login (sementara: tidak kedaluwarsa)
+ * - Aktif: user ada di router, sudah login (|u= ada) dan sisa waktu masih ada
+ * - Kedaluwarsa: user sudah terhapus dari router (dibersihkan vm-cleaner/vm-close) ATAU jatah waktunya habis
+ */
+export async function checkBatchStatus(
+  client: RouterClient,
+  batch: VoucherBatch
+): Promise<BatchStatusSummary> {
+  let routerUsers: HotspotUser[];
+  try {
+    routerUsers = await client.print<HotspotUser>('/ip/hotspot/user');
+  } catch {
+    // Jika router tidak bisa diakses, kembalikan default
+    return {
+      newCount: batch.codes.length,
+      activeCount: 0,
+      expiredCount: 0,
+      isAllExpired: false,
+    };
+  }
+
+  const routerUserMap = new Map<string, HotspotUser>();
+  for (const u of routerUsers) {
+    routerUserMap.set(u.name, u);
+  }
+
+  let newCount = 0;
+  let activeCount = 0;
+  let expiredCount = 0;
+
+  for (const code of batch.codes) {
+    const rUser = routerUserMap.get(code.user);
+    if (!rUser) {
+      // User sudah terhapus dari router (artinya sudah pernah login dan habis masa berlakunya)
+      expiredCount++;
+    } else {
+      const c = rUser.comment || '';
+      if (!c.includes('|u=')) {
+        // Belum pernah login
+        newCount++;
+      } else {
+        // Sudah login
+        activeCount++;
+      }
+    }
+  }
+
+  const isAllExpired = batch.codes.length > 0 && expiredCount === batch.codes.length;
+
+  return {
+    newCount,
+    activeCount,
+    expiredCount,
+    isAllExpired,
+  };
+}
+
+/**
+ * Hapus batch yang seluruh vouchernya sudah kedaluwarsa (KEPUTUSAN TERBARU §9)
+ * Hanya batch yang seluruh vouchernya sudah expired yang akan dihapus.
+ */
+export async function deleteExpiredBatches(
+  client: RouterClient
+): Promise<{ deletedBatchesCount: number; deletedVouchersCount: number }> {
+  const allBatches = await db.batches.toArray();
+  let deletedBatchesCount = 0;
+  let deletedVouchersCount = 0;
+
+  let routerUsers: HotspotUser[];
+  try {
+    routerUsers = await client.print<HotspotUser>('/ip/hotspot/user');
+  } catch {
+    // Jika tidak dapat membaca router, jangan hapus apa pun demi keamanan
+    return { deletedBatchesCount: 0, deletedVouchersCount: 0 };
+  }
+
+  const routerUserMap = new Map<string, HotspotUser>();
+  for (const u of routerUsers) {
+    routerUserMap.set(u.name, u);
+  }
+
+  for (const batch of allBatches) {
+    if (!batch.codes || batch.codes.length === 0) continue;
+
+    let expiredCount = 0;
+    for (const code of batch.codes) {
+      const rUser = routerUserMap.get(code.user);
+      if (!rUser) {
+        expiredCount++;
+      }
+    }
+
+    // Hanya jika SELURUH voucher dalam batch sudah kedaluwarsa
+    if (expiredCount === batch.codes.length) {
+      // Hapus sisa user/scheduler di router jika masih ada
+      for (const code of batch.codes) {
+        const rUser = routerUserMap.get(code.user);
+        if (rUser && rUser['.id']) {
+          try {
+            await client.remove('/ip/hotspot/user', rUser['.id']);
+          } catch {
+            // Ignore
+          }
+        }
+      }
+
+      if (batch.id) {
+        await db.batches.delete(batch.id);
+      }
+      deletedBatchesCount++;
+      deletedVouchersCount += batch.codes.length;
+    }
+  }
+
+  return { deletedBatchesCount, deletedVouchersCount };
+}
+

@@ -7,7 +7,12 @@
 import type { RouterClient } from '../../core/router/client';
 import type { HotspotProfile } from '../../core/router/types';
 import { buildRateLimit } from '../../core/router/mappers';
-import { isValidProfileName, isValidRateLimit, isValidDuration } from '../../core/utils/validation';
+import {
+  isValidProfileName,
+  isValidRateLimit,
+  isValidProfileDuration,
+} from '../../core/utils/validation';
+import { buildOnLoginScript } from '../setup/router-scripts';
 
 /**
  * Get all hotspot profiles
@@ -36,7 +41,7 @@ export async function createProfile(
     name: string;
     uploadSpeed: string; // "2M", "512k"
     downloadSpeed: string;
-    validity?: string; // "1h", "1d", "30d"
+    validity?: string; // "1h", "3h", "5h", "7h"
     idleTimeout?: string;
     keepaliveTimeout?: string;
     addressPool?: string;
@@ -53,8 +58,8 @@ export async function createProfile(
     throw new Error('Rate limit tidak valid');
   }
 
-  if (params.validity && !isValidDuration(params.validity)) {
-    throw new Error('Format validity tidak valid. Gunakan format: 1h, 1d, 30d');
+  if (params.validity && !isValidProfileDuration(params.validity)) {
+    throw new Error('Masa berlaku profil maksimal 7 jam, satuan menit atau jam saja (mis. 30m, 1h, 3h, 5h, 7h)');
   }
 
   // Check duplikat
@@ -70,7 +75,6 @@ export async function createProfile(
   };
 
   // session-timeout adalah parameter untuk masa berlaku di profile
-  // Ini berbeda dengan validity yang ada di hotspot user
   if (params.validity) {
     body['session-timeout'] = params.validity;
   }
@@ -91,9 +95,9 @@ export async function createProfile(
     body['mac-cookie-timeout'] = params.macCookieTimeout;
   }
 
-  // Set on-login script jika ada validity untuk tracking masa berlaku
+  // Set on-login script jika ada validity untuk tracking masa berlaku (KEPUTUSAN TERBARU §6)
   if (params.validity) {
-    body['on-login'] = generateOnLoginScript(params.validity);
+    body['on-login'] = buildOnLoginScript();
   }
 
   return client.add('/ip/hotspot/user/profile', body);
@@ -134,14 +138,14 @@ export async function updateProfile(
   }
 
   if (params.validity !== undefined) {
-    if (params.validity && !isValidDuration(params.validity)) {
-      throw new Error('Format validity tidak valid');
+    if (params.validity && !isValidProfileDuration(params.validity)) {
+      throw new Error('Masa berlaku profil maksimal 7 jam, satuan menit atau jam saja (mis. 30m, 1h, 3h, 5h, 7h)');
     }
     body['session-timeout'] = params.validity || 'none';
     
     // Update on-login script
     if (params.validity) {
-      body['on-login'] = generateOnLoginScript(params.validity);
+      body['on-login'] = buildOnLoginScript();
     } else {
       body['on-login'] = '';
     }
@@ -217,22 +221,3 @@ export async function getProfilesNeedingFix(
   return profiles.filter(p => p['shared-users'] !== '1');
 }
 
-/**
- * Generate on-login script untuk masa berlaku
- * Script ini akan membuat scheduler yang menghapus user saat kedaluwarsa
- */
-function generateOnLoginScript(validity: string): string {
-  // Script akan menggunakan validity yang diberikan
-  // Sesuai DEV-SPEC.md §6.3
-  return `
-:local sn ("vm-" . $user);
-:if ([:len [/system scheduler find name=$sn]] = 0) do={
-  /system scheduler add name=$sn interval=${validity} \\
-    start-date=[/system clock get date] start-time=[/system clock get time] \\
-    on-event=(":do { /ip hotspot active remove [find user=\\"" . $user . "\\"] } on-error={}; \\
-/ip hotspot user remove [find name=\\"" . $user . "\\"]; \\
-/system scheduler remove [find name=\\"" . $sn . "\\"]");
-  /ip hotspot user set [find name=$user] comment=("vm|start=" . [/system clock get date] . " " . [/system clock get time] . "|" . [/ip hotspot user get [find name=$user] comment]);
-}
-`.trim();
-}
