@@ -3,7 +3,7 @@
  * Sesuai KEPUTUSAN TERBARU §2, §3, §9 dan DESIGN.md §4.5
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Fragment, useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { strings } from '../../strings/id';
 import {
@@ -20,6 +20,8 @@ import {
   Check,
   AlertTriangle,
   RotateCcw,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -39,6 +41,10 @@ import {
   getAllBatches,
   deleteBatch,
   deleteExpiredBatches,
+  deleteVoucherAccount,
+  getBatchStatusMap,
+  type AccountInfo,
+  type BatchStatusDetail,
   type VoucherBatch,
 } from '../../features/vouchers/voucher-service';
 import { getAllPlans, type VoucherPlan } from '../../features/plans/plan-service';
@@ -57,15 +63,17 @@ export function Voucher() {
   const [filterPrinted, setFilterPrinted] = useState<'all' | 'printed' | 'unprinted'>('all');
 
   // Detail & Delete Dialog states
-  const [selectedBatch, setSelectedBatch] = useState<VoucherBatch | null>(null);
-  const [showDetailDialog, setShowDetailDialog] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [statusMap, setStatusMap] = useState<Record<string, BatchStatusDetail> | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [accountToDelete, setAccountToDelete] = useState<{ batchId: string; user: string } | null>(null);
   const [showDeleteBatchDialog, setShowDeleteBatchDialog] = useState<VoucherBatch | null>(null);
   const [showDeleteExpiredDialog, setShowDeleteExpiredDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Detail modal password visibility & copy feedback
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
-  const [copiedAll, setCopiedAll] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const routerClient = useRouterStore(state => state.client);
 
@@ -89,6 +97,23 @@ export function Voucher() {
     loadData();
   }, [loadData]);
 
+  // Status akun (Baru/Aktif/Kedaluwarsa) dibaca dari router dengan satu kali baca per putaran
+  const loadStatuses = useCallback(async () => {
+    if (!routerClient || batches.length === 0) {
+      setStatusMap(null);
+      return;
+    }
+    setStatusMap(await getBatchStatusMap(routerClient, batches));
+  }, [routerClient, batches]);
+
+  useEffect(() => {
+    loadStatuses();
+    const timer = setInterval(() => {
+      if (!document.hidden) loadStatuses();
+    }, 30000);
+    return () => clearInterval(timer);
+  }, [loadStatuses]);
+
   const handleGenerate = async (items: Array<{ planId: string; qty: number }>, samePassword: boolean) => {
     if (!routerClient) {
       throw new Error('Router tidak terhubung');
@@ -109,16 +134,46 @@ export function Voucher() {
     navigate(`/voucher/cetak/${batch.id}`);
   };
 
-  const handleDeleteBatch = async (batchId: string) => {
-    if (!routerClient) return;
+  const handleDeleteBatch = async (batchId: string, localOnly = false) => {
+    if (!localOnly && !routerClient) {
+      setDeleteError('Router tidak terhubung, jadi akun di router belum bisa dihapus.');
+      return;
+    }
     setIsDeleting(true);
+    setDeleteError(null);
     try {
-      await deleteBatch(routerClient, batchId);
+      const res = await deleteBatch(localOnly ? null : routerClient, batchId, { localOnly });
+      if (!res.removedLocal) {
+        setDeleteError(
+          `Gagal menghapus ${res.failed.length} akun di router (${res.failed[0].error}). ` +
+            'Riwayat batch belum dihapus, coba lagi.'
+        );
+        return;
+      }
       setShowDeleteBatchDialog(null);
-      setShowDetailDialog(false);
+      setExpandedId(null);
       await loadData();
     } catch (err) {
-      console.error('Failed to delete batch:', err);
+      setDeleteError(err instanceof Error ? err.message : 'Gagal menghapus batch');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteAccount = async (batchId: string, user: string, localOnly = false) => {
+    if (!localOnly && !routerClient) {
+      setDeleteError('Router tidak terhubung, jadi akun di router belum bisa dihapus.');
+      return;
+    }
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await deleteVoucherAccount(localOnly ? null : routerClient, batchId, user, { localOnly });
+      setAccountToDelete(null);
+      if (res.batchDeleted) setExpandedId(null);
+      await loadData();
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Gagal menghapus akun');
     } finally {
       setIsDeleting(false);
     }
@@ -138,11 +193,17 @@ export function Voucher() {
     }
   };
 
-  const handleCopyAllCodes = (batch: VoucherBatch) => {
-    const text = batch.codes.map(c => `${c.user}:${c.pass}`).join('\n');
+  const copyText = (key: string, text: string) => {
     navigator.clipboard.writeText(text);
-    setCopiedAll(true);
-    setTimeout(() => setCopiedAll(false), 2000);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+  const handleCopyAllCodes = (batch: VoucherBatch) => {
+    copyText(
+      `all:${batch.id}`,
+      batch.codes.map(c => `${c.user}:${c.pass}`).join('\n')
+    );
   };
 
   const togglePasswordVisibility = (username: string) => {
@@ -213,6 +274,35 @@ export function Voucher() {
       return true;
     });
   }, [batches, filterPlan, filterPrinted, filterDate]);
+
+  const renderAccountStatus = (info?: AccountInfo) => {
+    if (!info) {
+      return <span className="text-gray-400">—</span>;
+    }
+    if (info.status === 'expired') {
+      return (
+        <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+          ✖ Kedaluwarsa
+        </span>
+      );
+    }
+    if (info.status === 'new') {
+      return (
+        <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300">
+          ● Baru
+        </span>
+      );
+    }
+    const left =
+      info.validityMinutes !== undefined && info.usedMinutes !== undefined
+        ? Math.max(0, info.validityMinutes - info.usedMinutes)
+        : null;
+    return (
+      <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300">
+        ▶ Aktif{left !== null ? ` · sisa ${left} mnt` : ''}
+      </span>
+    );
+  };
 
   const resetFilters = () => {
     setFilterPlan('all');
@@ -398,10 +488,14 @@ export function Voucher() {
                   const batchQty = getBatchQty(batch);
                   const isMultiPlan = planLabels.length > 1;
 
+                  const batchStatus = batch.id ? statusMap?.[batch.id] : undefined;
+                  const isExpanded = expandedId === batch.id;
+
                   return (
+                    <Fragment key={batch.id}>
                     <tr
-                      key={batch.id}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors"
+                      className="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors cursor-pointer"
+                      onClick={() => setExpandedId(isExpanded ? null : batch.id ?? null)}
                     >
                       <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 text-xs">
                         {formatDate(batch.createdAt)}
@@ -423,9 +517,32 @@ export function Voucher() {
                         {batchQty} voucher
                       </td>
                       <td className="px-4 py-3 text-xs">
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300">
-                          ● {batchQty} akun
-                        </span>
+                        {batchStatus ? (
+                          <div className="flex flex-wrap gap-1">
+                            {batchStatus.newCount > 0 && (
+                              <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300">
+                                Baru {batchStatus.newCount}
+                              </span>
+                            )}
+                            {batchStatus.activeCount > 0 && (
+                              <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300">
+                                Aktif {batchStatus.activeCount}
+                              </span>
+                            )}
+                            {batchStatus.expiredCount > 0 && (
+                              <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                                Kedaluwarsa {batchStatus.expiredCount}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                            title="Status dari router belum tersedia"
+                          >
+                            {batchQty} akun · status belum dimuat
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-xs">
                         {batch.printedAt ? (
@@ -443,20 +560,27 @@ export function Voucher() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            title="Lihat Detail Kode"
-                            onClick={() => {
-                              setSelectedBatch(batch);
-                              setShowDetailDialog(true);
+                            title={isExpanded ? 'Tutup isi batch' : 'Lihat isi batch'}
+                            onClick={e => {
+                              e.stopPropagation();
+                              setExpandedId(isExpanded ? null : batch.id ?? null);
                             }}
                           >
-                            <Eye className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                            {isExpanded ? (
+                              <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                            )}
                           </Button>
 
                           <Button
                             variant="ghost"
                             size="sm"
                             title="Cetak PDF"
-                            onClick={() => navigate(`/voucher/cetak/${batch.id}`)}
+                            onClick={e => {
+                              e.stopPropagation();
+                              navigate(`/voucher/cetak/${batch.id}`);
+                            }}
                           >
                             <Printer className="w-4 h-4 text-green-600 dark:text-green-400" />
                           </Button>
@@ -465,7 +589,11 @@ export function Voucher() {
                             variant="ghost"
                             size="sm"
                             title="Hapus Batch"
-                            onClick={() => setShowDeleteBatchDialog(batch)}
+                            onClick={e => {
+                              e.stopPropagation();
+                              setDeleteError(null);
+                              setShowDeleteBatchDialog(batch);
+                            }}
                             className="hover:text-red-600"
                           >
                             <Trash2 className="w-4 h-4 text-red-500" />
@@ -473,6 +601,108 @@ export function Voucher() {
                         </div>
                       </td>
                     </tr>
+                    {isExpanded && (
+                      <tr className="bg-gray-50/60 dark:bg-gray-900/30">
+                        <td colSpan={6} className="px-4 py-3">
+                          <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+                            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                              Isi batch: {batch.codes.length} akun
+                              {!batchStatus && (
+                                <span className="font-normal text-gray-500">
+                                  {' '}· status router belum tersedia (router terputus?)
+                                </span>
+                              )}
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleCopyAllCodes(batch)}
+                              className="gap-1.5 text-xs"
+                            >
+                              {copiedKey === `all:${batch.id}` ? (
+                                <Check className="w-3.5 h-3.5 text-green-600" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                              {copiedKey === `all:${batch.id}` ? 'Tersalin' : 'Salin Semua'}
+                            </Button>
+                          </div>
+
+                          <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 overflow-x-auto">
+                            <table className="w-full text-xs">
+                              <thead className="bg-gray-50 dark:bg-gray-900 text-gray-500">
+                                <tr>
+                                  <th className="px-3 py-2 text-left font-medium w-8">No</th>
+                                  <th className="px-3 py-2 text-left font-medium">Username</th>
+                                  <th className="px-3 py-2 text-left font-medium">Password</th>
+                                  <th className="px-3 py-2 text-left font-medium">Paket</th>
+                                  <th className="px-3 py-2 text-left font-medium">Status</th>
+                                  <th className="px-3 py-2 text-right font-medium">Aksi</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-100 dark:divide-gray-900">
+                                {batch.codes.map((code, idx) => {
+                                  const isPassVisible = !!visiblePasswords[code.user];
+                                  return (
+                                    <tr key={code.user}>
+                                      <td className="px-3 py-2 text-gray-400 font-mono">{idx + 1}</td>
+                                      <td className="px-3 py-2 font-mono font-bold tracking-wide text-gray-900 dark:text-gray-100">
+                                        {code.user}
+                                      </td>
+                                      <td className="px-3 py-2 font-mono font-bold tracking-wide text-gray-900 dark:text-gray-100">
+                                        <span className="inline-flex items-center gap-1.5">
+                                          {isPassVisible ? code.pass : '••••••'}
+                                          <button
+                                            type="button"
+                                            title={isPassVisible ? 'Sembunyikan password' : 'Tampilkan password'}
+                                            onClick={() => togglePasswordVisibility(code.user)}
+                                            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded"
+                                          >
+                                            {isPassVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                          </button>
+                                        </span>
+                                      </td>
+                                      <td className="px-3 py-2 text-gray-700 dark:text-gray-300">
+                                        {getPlanLabel(code.planId)}
+                                      </td>
+                                      <td className="px-3 py-2">
+                                        {renderAccountStatus(batchStatus?.accounts[code.user])}
+                                      </td>
+                                      <td className="px-3 py-2 text-right whitespace-nowrap">
+                                        <button
+                                          type="button"
+                                          title="Salin username:password"
+                                          onClick={() => copyText(`one:${batch.id}:${code.user}`, `${code.user}:${code.pass}`)}
+                                          className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded"
+                                        >
+                                          {copiedKey === `one:${batch.id}:${code.user}` ? (
+                                            <Check className="w-4 h-4 text-green-600" />
+                                          ) : (
+                                            <Copy className="w-4 h-4" />
+                                          )}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          title="Hapus akun ini"
+                                          onClick={() => {
+                                            setDeleteError(null);
+                                            setAccountToDelete({ batchId: batch.id!, user: code.user });
+                                          }}
+                                          className="p-1.5 text-red-400 hover:text-red-600 rounded"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   );
                 })
               )}
@@ -480,87 +710,6 @@ export function Voucher() {
           </table>
         </div>
       </div>
-
-      {/* Dialog Detail Batch (Username & Password Masked with Eye) */}
-      <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="max-w-xl max-h-[85vh] flex flex-col">
-          <DialogHeader onClose={() => setShowDetailDialog(false)}>
-            <DialogTitle>Detail Batch Voucher</DialogTitle>
-            <DialogDescription>
-              {selectedBatch && `${selectedBatch.codes.length} voucher · Dibuat ${formatDate(selectedBatch.createdAt)}`}
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogBody className="space-y-4 overflow-y-auto pr-1">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                Daftar Akun Voucher (6 Karakter)
-              </span>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => selectedBatch && handleCopyAllCodes(selectedBatch)}
-                className="gap-1.5 text-xs"
-              >
-                {copiedAll ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
-                {copiedAll ? 'Tersalin' : 'Salin Semua'}
-              </Button>
-            </div>
-
-            <div className="rounded-lg border border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-900 overflow-hidden">
-              {selectedBatch?.codes.map((code, idx) => {
-                const isPassVisible = !!visiblePasswords[code.user];
-                return (
-                  <div key={idx} className="p-3 flex items-center justify-between text-xs bg-white dark:bg-gray-900">
-                    <div className="flex items-center gap-4">
-                      <span className="text-gray-400 font-mono w-4">{idx + 1}.</span>
-                      <div>
-                        <span className="text-[10px] text-gray-400 block">USERNAME</span>
-                        <span className="font-mono font-bold text-gray-900 dark:text-gray-100 text-sm tracking-wide">
-                          {code.user}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <span className="text-[10px] text-gray-400 block text-right">PASSWORD</span>
-                        <span className="font-mono font-bold text-gray-900 dark:text-gray-100 text-sm tracking-wide">
-                          {isPassVisible ? code.pass : '••••••'}
-                        </span>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => togglePasswordVisibility(code.user)}
-                        className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded"
-                      >
-                        {isPassVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </DialogBody>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDetailDialog(false)}>
-              Tutup
-            </Button>
-            <Button
-              onClick={() => {
-                setShowDetailDialog(false);
-                if (selectedBatch) navigate(`/voucher/cetak/${selectedBatch.id}`);
-              }}
-              className="gap-2 bg-green-600 hover:bg-green-700 text-white"
-            >
-              <Printer className="w-4 h-4" />
-              Cetak PDF
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Dialog Konfirmasi Hapus Single Batch */}
       <Dialog open={!!showDeleteBatchDialog} onOpenChange={() => setShowDeleteBatchDialog(null)}>
@@ -576,20 +725,85 @@ export function Voucher() {
 
           <DialogBody className="space-y-3">
             <p className="text-xs text-gray-600 dark:text-gray-400">
-              Akun hotspot dan scheduler terkait di router MikroTik akan dibersihkan secara permanen.
+              Akun hotspot batch ini dan sesi aktifnya di router MikroTik akan dihapus permanen.
             </p>
+            {!routerClient && (
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                Router tidak terhubung. Kamu hanya bisa menghapus riwayat lokal; akun yang masih ada di router tidak ikut terhapus.
+              </p>
+            )}
+            {deleteError && (
+              <p className="text-xs text-red-600 dark:text-red-400">{deleteError}</p>
+            )}
           </DialogBody>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDeleteBatchDialog(null)}>
               Batal
             </Button>
+            {(deleteError || !routerClient) && (
+              <Button
+                variant="outline"
+                disabled={isDeleting}
+                onClick={() => showDeleteBatchDialog?.id && handleDeleteBatch(showDeleteBatchDialog.id, true)}
+              >
+                Hapus riwayat saja
+              </Button>
+            )}
             <Button
               onClick={() => showDeleteBatchDialog?.id && handleDeleteBatch(showDeleteBatchDialog.id)}
               disabled={isDeleting}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               {isDeleting ? 'Menghapus…' : 'Hapus Batch'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Konfirmasi Hapus Satu Akun */}
+      <Dialog open={!!accountToDelete} onOpenChange={() => setAccountToDelete(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader onClose={() => setAccountToDelete(null)}>
+            <DialogTitle className="text-red-600 dark:text-red-400">
+              Hapus Akun {accountToDelete?.user}?
+            </DialogTitle>
+            <DialogDescription>
+              Akun ini diputus dari sesi aktif dan dihapus dari router serta dari batch.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogBody className="space-y-3">
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              Voucher yang sudah dicetak dengan akun ini tidak akan bisa dipakai lagi. Jika ini akun terakhir, batch ikut dihapus.
+            </p>
+            {!routerClient && (
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                Router tidak terhubung. Hanya riwayat lokal yang bisa dihapus.
+              </p>
+            )}
+            {deleteError && <p className="text-xs text-red-600 dark:text-red-400">{deleteError}</p>}
+          </DialogBody>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAccountToDelete(null)}>
+              Batal
+            </Button>
+            {(deleteError || !routerClient) && (
+              <Button
+                variant="outline"
+                disabled={isDeleting}
+                onClick={() => accountToDelete && handleDeleteAccount(accountToDelete.batchId, accountToDelete.user, true)}
+              >
+                Hapus riwayat saja
+              </Button>
+            )}
+            <Button
+              onClick={() => accountToDelete && handleDeleteAccount(accountToDelete.batchId, accountToDelete.user)}
+              disabled={isDeleting || !routerClient}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isDeleting ? 'Menghapus…' : 'Hapus Akun'}
             </Button>
           </DialogFooter>
         </DialogContent>

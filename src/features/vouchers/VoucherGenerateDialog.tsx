@@ -58,7 +58,10 @@ export function VoucherGenerateDialog({
   // Total voucher dari semua item
   const totalQty = items.reduce((sum, item) => sum + (item.qty || 0), 0);
   const remainingSlots = MAX_VOUCHERS_PER_BATCH - totalQty;
-  const canAddMore = remainingSlots > 0 && items.length < plans.length;
+  // Baris pertama default 8 voucher memenuhi batch, jadi sisa slot 0 tidak boleh menghalangi
+  // penambahan paket lain: slot diambil dari baris dengan jumlah terbanyak saat menambah.
+  const canAddMore =
+    items.length < plans.length && items.length < MAX_VOUCHERS_PER_BATCH;
 
   // Cek apakah semua item sudah valid
   const allItemsValid = items.every(item => item.planId && item.qty >= 1);
@@ -71,7 +74,17 @@ export function VoucherGenerateDialog({
 
   const handleAddItem = () => {
     if (!canAddMore) return;
-    setItems([...items, { planId: '', qty: 1 }]);
+    const next = items.map(item => ({ ...item }));
+    if (remainingSlots <= 0) {
+      // Ambil 1 slot dari baris yang jumlahnya paling banyak (minimal tersisa 1)
+      let donor = -1;
+      next.forEach((item, i) => {
+        if (item.qty > 1 && (donor === -1 || item.qty > next[donor].qty)) donor = i;
+      });
+      if (donor === -1) return; // semua baris sudah 1 voucher
+      next[donor].qty -= 1;
+    }
+    setItems([...next, { planId: '', qty: 1 }]);
   };
 
   const handleRemoveItem = (index: number) => {
@@ -326,6 +339,8 @@ export function VoucherGenerateDialog({
 
                     <p className="text-xs text-gray-500 text-center">
                       Maksimal {MAX_VOUCHERS_PER_BATCH} voucher per batch (1 halaman A4).
+                      Satu batch boleh berisi beberapa jenis paket: klik &quot;Tambah Paket Lain&quot;,
+                      jumlah dibagi dari total {MAX_VOUCHERS_PER_BATCH}.
                       Butuh lebih banyak? Generate lagi setelah selesai.
                     </p>
                   </div>

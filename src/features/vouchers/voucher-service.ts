@@ -10,7 +10,7 @@ import type { RouterClient } from '../../core/router/client';
 import type { HotspotUser } from '../../core/router/types';
 import { generateCode } from '../../core/utils/random-code';
 import { parseRouterDurationToMinutes } from '../../core/utils/validation';
-import { buildVoucherComment } from '../setup/router-scripts';
+import { buildVoucherComment, parseVoucherComment } from '../setup/router-scripts';
 import { getPlan } from '../plans/plan-service';
 import { MAX_VOUCHERS_PER_BATCH } from '../../core/constants';
 
@@ -284,36 +284,209 @@ export async function markBatchAsPrinted(id: string): Promise<void> {
   });
 }
 
+export interface DeleteBatchResult {
+  removedFromRouter: number;
+  failed: Array<{ user: string; error: string }>;
+  removedLocal: boolean;
+}
+
+interface ActiveSession {
+  '.id': string;
+  user: string;
+}
+
 /**
- * Delete batch dan semua user terkait di router
+ * Putuskan sesi aktif untuk sekumpulan username. Gagal di sini tidak fatal.
+ */
+async function kickSessions(client: RouterClient, usernames: Set<string>): Promise<void> {
+  if (usernames.size === 0) return;
+  try {
+    const active = await client.print<ActiveSession>('/ip/hotspot/active');
+    for (const session of active) {
+      if (usernames.has(session.user)) {
+        await client.remove('/ip/hotspot/active', session['.id']);
+      }
+    }
+  } catch (error) {
+    console.error('Failed to kick active sessions:', error);
+  }
+}
+
+/**
+ * User di router yang benar-benar milik batch ini (nama cocok DAN comment batch cocok),
+ * supaya user lain dengan nama sama tidak ikut terhapus.
+ */
+function findBatchUsers(routerUsers: HotspotUser[], batch: VoucherBatch): HotspotUser[] {
+  const names = new Set(batch.codes.map(c => c.user));
+  const prefix = `vm|b=${batch.id}`;
+  return routerUsers.filter(u => names.has(u.name) && (u.comment ?? '').startsWith(prefix));
+}
+
+/**
+ * Delete batch beserta user-nya di router.
+ * - Dengan client: user dan sesi aktif dihapus dari router. Jika ada yang gagal,
+ *   riwayat lokal TIDAK dihapus (agar bisa dicoba lagi) dan daftar gagal dikembalikan.
+ * - localOnly = true (atau client null): hanya hapus riwayat lokal, router tidak disentuh.
  */
 export async function deleteBatch(
-  client: RouterClient,
-  id: string
-): Promise<void> {
+  client: RouterClient | null,
+  id: string,
+  options: { localOnly?: boolean } = {}
+): Promise<DeleteBatchResult> {
   const batch = await db.batches.get(id);
   if (!batch) {
     throw new Error('Batch tidak ditemukan');
   }
 
-  // Get users dari router dengan comment yang match batch ID
-  const users = await client.print<HotspotUser>('/ip/hotspot/user');
-  const batchUsers = users.filter(u => 
-    u.comment?.includes(`vm|b=${id}`)
-  );
+  const result: DeleteBatchResult = { removedFromRouter: 0, failed: [], removedLocal: false };
 
-  // Delete users dari router
-  for (const user of batchUsers) {
-    try {
-      await client.remove('/ip/hotspot/user', user['.id']);
-    } catch (error) {
-      console.error(`Failed to delete user ${user.name}:`, error);
-      // Continue deleting other users
+  if (client && !options.localOnly) {
+    const routerUsers = await client.print<HotspotUser>('/ip/hotspot/user');
+    const batchUsers = findBatchUsers(routerUsers, batch);
+
+    await kickSessions(client, new Set(batchUsers.map(u => u.name)));
+
+    for (const user of batchUsers) {
+      try {
+        await client.remove('/ip/hotspot/user', user['.id']);
+        result.removedFromRouter++;
+      } catch (error) {
+        result.failed.push({
+          user: user.name,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+
+    if (result.failed.length > 0) {
+      return result;
     }
   }
 
-  // Delete batch dari Dexie
   await db.batches.delete(id);
+  result.removedLocal = true;
+  return result;
+}
+
+/**
+ * Hapus satu akun voucher dari batch (router + riwayat lokal).
+ * Jika akun terakhir dihapus, batch ikut dihapus.
+ */
+export async function deleteVoucherAccount(
+  client: RouterClient | null,
+  batchId: string,
+  username: string,
+  options: { localOnly?: boolean } = {}
+): Promise<{ batchDeleted: boolean }> {
+  const batch = await db.batches.get(batchId);
+  if (!batch) {
+    throw new Error('Batch tidak ditemukan');
+  }
+  if (!batch.codes.some(c => c.user === username)) {
+    throw new Error(`Akun ${username} tidak ada di batch ini`);
+  }
+
+  if (client && !options.localOnly) {
+    const routerUsers = await client.print<HotspotUser>('/ip/hotspot/user');
+    const target = findBatchUsers(routerUsers, batch).find(u => u.name === username);
+    if (target) {
+      await kickSessions(client, new Set([username]));
+      await client.remove('/ip/hotspot/user', target['.id']);
+    }
+    // Jika tidak ada di router, akun sudah kedaluwarsa/terhapus: cukup bersihkan riwayat.
+  }
+
+  const remaining = batch.codes.filter(c => c.user !== username);
+  if (remaining.length === 0) {
+    await db.batches.delete(batchId);
+    return { batchDeleted: true };
+  }
+
+  const qtyByPlan = new Map<string, number>();
+  for (const c of remaining) {
+    qtyByPlan.set(c.planId, (qtyByPlan.get(c.planId) ?? 0) + 1);
+  }
+  await db.batches.update(batchId, {
+    codes: remaining,
+    items: [...qtyByPlan.entries()].map(([planId, qty]) => ({ planId, qty })),
+  });
+  return { batchDeleted: false };
+}
+
+export type AccountStatus = 'new' | 'active' | 'expired';
+
+export interface AccountInfo {
+  status: AccountStatus;
+  usedMinutes?: number;
+  validityMinutes?: number;
+}
+
+export interface BatchStatusDetail {
+  accounts: Record<string, AccountInfo>;
+  newCount: number;
+  activeCount: number;
+  expiredCount: number;
+}
+
+/**
+ * Klasifikasi tiap akun dalam batch terhadap daftar user di router (fungsi murni).
+ * - expired: user sudah tidak ada di router (dibersihkan vm-cleaner/vm-close)
+ * - new: ada di router, belum pernah login (belum ada |u=)
+ * - active: ada di router dan sudah login
+ */
+export function classifyBatchAccounts(
+  batch: VoucherBatch,
+  routerUsers: HotspotUser[]
+): BatchStatusDetail {
+  const byName = new Map<string, HotspotUser>();
+  for (const u of routerUsers) byName.set(u.name, u);
+
+  const detail: BatchStatusDetail = { accounts: {}, newCount: 0, activeCount: 0, expiredCount: 0 };
+  const prefix = `vm|b=${batch.id}`;
+
+  for (const code of batch.codes) {
+    const rUser = byName.get(code.user);
+    const comment = rUser?.comment ?? '';
+    if (!rUser || !comment.startsWith(prefix)) {
+      detail.accounts[code.user] = { status: 'expired' };
+      detail.expiredCount++;
+      continue;
+    }
+    const meta = parseVoucherComment(comment);
+    if (!meta.hasStarted) {
+      detail.accounts[code.user] = { status: 'new', validityMinutes: meta.validityMinutes };
+      detail.newCount++;
+    } else {
+      detail.accounts[code.user] = {
+        status: 'active',
+        usedMinutes: meta.usedMinutes,
+        validityMinutes: meta.validityMinutes,
+      };
+      detail.activeCount++;
+    }
+  }
+  return detail;
+}
+
+/**
+ * Status semua batch dengan SATU kali baca user hotspot dari router.
+ * Mengembalikan null jika router tidak bisa dibaca (status tidak diketahui).
+ */
+export async function getBatchStatusMap(
+  client: RouterClient,
+  batches: VoucherBatch[]
+): Promise<Record<string, BatchStatusDetail> | null> {
+  let routerUsers: HotspotUser[];
+  try {
+    routerUsers = await client.print<HotspotUser>('/ip/hotspot/user');
+  } catch {
+    return null;
+  }
+  const map: Record<string, BatchStatusDetail> = {};
+  for (const b of batches) {
+    if (b.id) map[b.id] = classifyBatchAccounts(b, routerUsers);
+  }
+  return map;
 }
 
 /**
