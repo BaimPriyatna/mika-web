@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    /* Colors - Light mode */
+    --background: 210 40% 98%; /* #F8FAFC */
+    --foreground: 222 47% 11%; /* #0F172A */
+    --card: 0 0% 100%; /* #FFFFFF */
+    --card-foreground: 222 47% 11%;
+    --border: 214 32% 91%; /* #E2E8F0 */
+    --input: 214 32% 91%;
+    --ring: 142 76% 36%; /* --primary */
+    
+    --primary: 142 76% 36%; /* #15803D */
+    --primary-foreground: 0 0% 100%; /* #FFFFFF */
+    
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    
+    --success: 142 76% 36%; /* #15803D */
+    --success-foreground: 0 0% 100%;
+    
+    --warning: 30 89% 38%; /* #B45309 */
+    --warning-foreground: 0 0% 100%;
+    
+    --destructive: 0 84% 60%; /* #B91C1C */
+    --destructive-foreground: 0 0% 100%;
+    
+    --info: 221 83% 53%; /* #1D4ED8 */
+    --info-foreground: 0 0% 100%;
+    
+    --muted: 214 32% 91%;
+    --muted-foreground: 215 16% 47%; /* #64748B */
+    
+    --accent: 214 32% 91%;
+    --accent-foreground: 222 47% 11%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    
+    /* Chart colors */
+    --chart-1: 142 76% 36%;
+    --chart-2: 30 89% 38%;
+    --chart-3: 221 83% 53%;
+    --chart-4: 0 84% 60%;
+    --chart-5: 215 16% 47%;
+  }
+
+  .dark {
+    /* Colors - Dark mode */
+    --background: 222 47% 11%; /* #0B1220 */
+    --foreground: 214 32% 91%; /* #E6EDF7 */
+    --card: 220 26% 14%; /* #111A2E */
+    --card-foreground: 214 32% 91%;
+    --border: 217 30% 22%; /* #22304A */
+    --input: 217 30% 22%;
+    --ring: 142 69% 58%; /* --primary dark */
+    
+    --primary: 142 69% 58%; /* #4ADE80 */
+    --primary-foreground: 142 91% 11%; /* #052E16 */
+    
+    --secondary: 217 30% 22%;
+    --secondary-foreground: 214 32% 91%;
+    
+    --success: 142 69% 58%; /* #4ADE80 */
+    --success-foreground: 142 91% 11%;
+    
+    --warning: 38 92% 50%; /* #FBBF24 */
+    --warning-foreground: 38 91% 11%;
+    
+    --destructive: 0 84% 70%; /* #F87171 */
+    --destructive-foreground: 0 91% 11%;
+    
+    --info: 213 94% 68%; /* #60A5FA */
+    --info-foreground: 213 91% 11%;
+    
+    --muted: 217 30% 22%;
+    --muted-foreground: 215 20% 65%; /* #94A3B8 */
+    
+    --accent: 217 30% 22%;
+    --accent-foreground: 214 32% 91%;
+    
+    --popover: 220 26% 14%;
+    --popover-foreground: 214 32% 91%;
+    
+    /* Chart colors */
+    --chart-1: 142 69% 58%;
+    --chart-2: 38 92% 50%;
+    --chart-3: 213 94% 68%;
+    --chart-4: 0 84% 70%;
+    --chart-5: 215 20% 65%;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+  
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* Typography */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: Inter, system-ui, sans-serif;
+    color: hsl(var(--foreground));
+  }
+  
+  /* Focus styles - 2px primary ring */
+  *:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary));
+  }
+  
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
