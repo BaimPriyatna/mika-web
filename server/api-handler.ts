@@ -104,7 +104,7 @@ export async function handleApiRequest(req: IncomingMessage, res: ServerResponse
     // 6. Generic Query (print, add, set, remove)
     if (pathname === '/api/router/query' && req.method === 'POST') {
       const body = await readJsonBody<{
-        action: 'print' | 'add' | 'set' | 'remove';
+        action: 'print' | 'add' | 'set' | 'remove' | 'call';
         path: string;
         data?: Record<string, string>;
         id?: string;
@@ -127,6 +127,10 @@ export async function handleApiRequest(req: IncomingMessage, res: ServerResponse
         if (!body.id) throw new Error('ID wajib diisi untuk set');
         await globalRouterManager.set(body.path, body.id, body.data || {});
         sendJson(200, { success: true });
+        return true;
+      } else if (body.action === 'call') {
+        const rows = await globalRouterManager.call(body.path, body.data || {});
+        sendJson(200, { success: true, data: rows });
         return true;
       } else if (body.action === 'remove') {
         if (!body.id) throw new Error('ID wajib diisi untuk remove');

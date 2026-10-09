@@ -39,7 +39,7 @@ export class RouterClient {
    * Helper: call (untuk command execution)
    */
   async call<T>(path: string, body?: Record<string, string>): Promise<T[]> {
-    // Call menggunakan 'print' action dengan body sebagai parameter
-    return queryRouter<T[]>('print', path, body);
+    // Perintah non-CRUD (mis. make-static), BUKAN print
+    return queryRouter<T[]>('call', path, body);
   }
 }

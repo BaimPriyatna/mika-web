@@ -201,6 +201,16 @@ export class RouterManager {
     throw new Error('Router belum terhubung');
   }
 
+  async call(path: string, body: Record<string, string> = {}): Promise<Record<string, string>[]> {
+    if (this.activeBinaryClient) {
+      return this.activeBinaryClient.call(path, body);
+    }
+    if (this.activeRestClient) {
+      return this.activeRestClient.call(path, body);
+    }
+    throw new Error('Router belum terhubung');
+  }
+
   async getOverview(): Promise<RouterOverview> {
     if (!this.isConnected()) {
       return {

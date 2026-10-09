@@ -105,7 +105,7 @@ export async function getRouterOverview(): Promise<RouterOverview> {
 }
 
 export async function queryRouter<T = any>(
-  action: 'print' | 'add' | 'set' | 'remove',
+  action: 'print' | 'add' | 'set' | 'remove' | 'call',
   path: string,
   data?: Record<string, string>,
   id?: string
@@ -124,7 +124,7 @@ export async function queryRouter<T = any>(
   // Untuk action 'print', data ada di json.data (array)
   // Untuk action 'add', ID ada di json.id
   // Untuk action 'set' dan 'remove', tidak ada data return
-  if (action === 'print') {
+  if (action === 'print' || action === 'call') {
     return json.data as T;
   } else if (action === 'add') {
     return json.id as T;

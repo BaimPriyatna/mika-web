@@ -137,4 +137,30 @@ export class RestRouterClient {
       throw new Error(`REST Delete Error HTTP ${response.status}: ${text || response.statusText}`);
     }
   }
+
+  /** Perintah non-CRUD (mis. /ip/dhcp-server/lease/make-static): POST /rest/<path> dengan body JSON */
+  async call(path: string, body: Record<string, string> = {}): Promise<Record<string, string>[]> {
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    const response = await fetch(`${this.baseUrl}${cleanPath}`, {
+      method: 'POST',
+      headers: {
+        Authorization: this.authHeader,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`REST Call Error HTTP ${response.status}: ${text || response.statusText}`);
+    }
+
+    try {
+      const data = (await response.json()) as Record<string, string> | Record<string, string>[];
+      return Array.isArray(data) ? data : [data];
+    } catch {
+      return [];
+    }
+  }
 }
