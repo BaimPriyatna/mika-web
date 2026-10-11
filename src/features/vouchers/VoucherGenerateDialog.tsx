@@ -27,7 +27,7 @@ interface VoucherGenerateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   plans: VoucherPlan[];
-  onGenerate: (items: Array<{ planId: string; qty: number }>, samePassword: boolean) => Promise<void>;
+  onGenerate: (items: Array<{ planId: string; qty: number }>) => Promise<void>;
   onSuccess?: (batchId: string) => void; // For future use
 }
 
@@ -46,7 +46,6 @@ export function VoucherGenerateDialog({
 }: VoucherGenerateDialogProps) {
   const [step, setStep] = useState<Step>(1);
   const [items, setItems] = useState<PlanItem[]>([{ planId: '', qty: 8 }]);
-  const [samePassword, setSamePassword] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -142,13 +141,12 @@ export function VoucherGenerateDialog({
     setError(null);
 
     try {
-      await onGenerate(items, samePassword);
+      await onGenerate(items);
       // Success - close dialog
       onOpenChange(false);
       // Reset state
       setStep(1);
       setItems([{ planId: '', qty: 8 }]);
-      setSamePassword(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Terjadi kesalahan';
       setError(message);
@@ -164,8 +162,7 @@ export function VoucherGenerateDialog({
       setTimeout(() => {
         setStep(1);
         setItems([{ planId: '', qty: 8 }]);
-        setSamePassword(false);
-        setError(null);
+          setError(null);
       }, 200);
     }
   };
@@ -347,43 +344,6 @@ export function VoucherGenerateDialog({
                 )}
               </div>
 
-              {/* Mode Password */}
-              <div>
-                <Label className="mb-2 block">Mode Password</Label>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => setSamePassword(false)}
-                    className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
-                      !samePassword
-                        ? 'border-green-600 bg-green-50 dark:bg-green-900/20'
-                        : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
-                    }`}
-                  >
-                    <div className="font-medium text-gray-900 dark:text-gray-100">
-                      Berbeda
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      Setiap voucher punya username dan password berbeda
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => setSamePassword(true)}
-                    className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
-                      samePassword
-                        ? 'border-green-600 bg-green-50 dark:bg-green-900/20'
-                        : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
-                    }`}
-                  >
-                    <div className="font-medium text-gray-900 dark:text-gray-100">
-                      User = Password
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      Username sama dengan password (lebih mudah diingat)
-                    </div>
-                  </button>
-                </div>
-              </div>
-
               {/* Format Kode (Locked) */}
               <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
                 <div className="flex items-center gap-2 mb-3">
@@ -392,8 +352,11 @@ export function VoucherGenerateDialog({
                     Format Kode Terkunci
                   </span>
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                   6 karakter, huruf besar + angka (tanpa O, I, L, 0, 1)
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Satu kode dipakai sebagai username sekaligus password.
                 </p>
                 <div className="flex gap-2">
                   <span className="text-xs text-gray-500">Contoh:</span>
@@ -446,9 +409,9 @@ export function VoucherGenerateDialog({
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Mode</span>
+                    <span className="text-gray-600 dark:text-gray-400">Kode voucher</span>
                     <span className="font-medium text-gray-900 dark:text-gray-100">
-                      {samePassword ? 'User = Password' : 'Berbeda'}
+                      Username = Password
                     </span>
                   </div>
                   <div className="pt-3 border-t border-gray-200 dark:border-gray-800">

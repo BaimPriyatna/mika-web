@@ -28,7 +28,6 @@ const generateBatchSchema = z.object({
       qty: z.number().int('Jumlah harus bilangan bulat').min(1, 'Minimal 1 voucher per paket'),
     })
   ).min(1, 'Minimal 1 paket'),
-  samePassword: z.boolean(),
 }).refine(
   (data) => {
     const totalQty = data.items.reduce((sum, item) => sum + item.qty, 0);
@@ -47,7 +46,6 @@ const legacyGenerateBatchSchema = z.object({
     .int('Jumlah harus bilangan bulat')
     .min(1, 'Minimal 1 voucher')
     .max(MAX_VOUCHERS_PER_BATCH, `Maksimal ${MAX_VOUCHERS_PER_BATCH} voucher per batch`),
-  samePassword: z.boolean(),
 });
 
 /**
@@ -72,11 +70,10 @@ export class PartialBatchError extends Error {
  */
 export async function generateMultiPlanBatch(
   client: RouterClient,
-  items: Array<{ planId: string; qty: number }>,
-  samePassword: boolean
+  items: Array<{ planId: string; qty: number }>
 ): Promise<VoucherBatch> {
   // Validasi input
-  const validated = generateBatchSchema.parse({ items, samePassword });
+  const validated = generateBatchSchema.parse({ items });
 
   // Get all plans dan validasi
   const plans = await Promise.all(
@@ -133,8 +130,8 @@ export async function generateMultiPlanBatch(
         codes.some(c => c.user === username)
       );
 
-      // Mode "user = password": password sama dengan username akun itu sendiri
-      const password = samePassword ? username : generateCode();
+      // Satu kode voucher: password selalu sama dengan username akun itu sendiri
+      const password = username;
 
       codes.push({ user: username, pass: password, planId });
     }
@@ -196,7 +193,7 @@ export async function generateMultiPlanBatch(
     id: batchId,
     items: [...createdByPlan.entries()].map(([planId, qty]) => ({ planId, qty })),
     createdAt: Date.now(),
-    samePassword: validated.samePassword,
+    samePassword: true, // selalu user = password; field dipertahankan untuk batch/backup lama
     codes: createdCodes,
   };
 
@@ -222,17 +219,15 @@ export async function generateMultiPlanBatch(
 export async function generateBatch(
   client: RouterClient,
   planId: string,
-  qty: number,
-  samePassword: boolean
+  qty: number
 ): Promise<VoucherBatch> {
   // Validasi input dengan legacy schema
-  const validated = legacyGenerateBatchSchema.parse({ planId, qty, samePassword });
+  const validated = legacyGenerateBatchSchema.parse({ planId, qty });
 
   // Delegate ke generateMultiPlanBatch
   return generateMultiPlanBatch(
     client,
-    [{ planId: validated.planId, qty: validated.qty }],
-    validated.samePassword
+    [{ planId: validated.planId, qty: validated.qty }]
   );
 }
 

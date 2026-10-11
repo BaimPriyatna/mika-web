@@ -114,14 +114,14 @@ export function Voucher() {
     return () => clearInterval(timer);
   }, [loadStatuses]);
 
-  const handleGenerate = async (items: Array<{ planId: string; qty: number }>, samePassword: boolean) => {
+  const handleGenerate = async (items: Array<{ planId: string; qty: number }>) => {
     if (!routerClient) {
       throw new Error('Router tidak terhubung');
     }
 
     let batch;
     try {
-      batch = await generateMultiPlanBatch(routerClient, items, samePassword);
+      batch = await generateMultiPlanBatch(routerClient, items);
     } catch (error) {
       if (error instanceof PartialBatchError) {
         // Voucher yang berhasil sudah tersimpan: segarkan daftar lalu tampilkan error ke pengguna

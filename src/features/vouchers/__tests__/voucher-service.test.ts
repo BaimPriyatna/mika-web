@@ -58,7 +58,7 @@ describe('generateMultiPlanBatch', () => {
 
   it('menaruh |v=<menit> di comment agar vm-cleaner bisa memproses voucher', async () => {
     const { client, added } = makeClient();
-    await generateMultiPlanBatch(client, [{ planId: 'p1', qty: 3 }], false);
+    await generateMultiPlanBatch(client, [{ planId: 'p1', qty: 3 }]);
     expect(added).toHaveLength(3);
     for (const a of added) {
       expect(a.body.comment).toMatch(/^vm\|b=[^|]+\|p=5000\|v=60\|plan=p1$/);
@@ -67,34 +67,32 @@ describe('generateMultiPlanBatch', () => {
 
   it('tanpa masa berlaku di profil: comment tidak memuat |v=', async () => {
     const { client, added } = makeClient();
-    await generateMultiPlanBatch(client, [{ planId: 'plan-none', qty: 1 }], false);
+    await generateMultiPlanBatch(client, [{ planId: 'plan-none', qty: 1 }]);
     expect(added[0].body.comment).not.toContain('|v=');
   });
 
-  it('mode user = password: password sama dengan username tiap akun', async () => {
+  it('password selalu sama dengan username tiap akun (satu kode voucher)', async () => {
     const { client, added } = makeClient();
-    await generateMultiPlanBatch(client, [{ planId: 'p1', qty: 8 }], true);
+    await generateMultiPlanBatch(client, [{ planId: 'p1', qty: 8 }]);
+    expect(added).toHaveLength(8);
     for (const a of added) {
       expect(a.body.password).toBe(a.body.name);
-    }
-    const names = new Set(added.map(a => a.body.name));
-    expect(names.size).toBe(8);
-  });
-
-  it('mode user != password: kode valid 6 karakter dan username unik', async () => {
-    const { client, added } = makeClient();
-    await generateMultiPlanBatch(client, [{ planId: 'p1', qty: 8 }], false);
-    for (const a of added) {
       expect(isValidVoucherCode(a.body.name)).toBe(true);
-      expect(isValidVoucherCode(a.body.password)).toBe(true);
     }
     expect(new Set(added.map(a => a.body.name)).size).toBe(8);
+  });
+
+  it('batch tersimpan bertanda user = password', async () => {
+    const { client } = makeClient();
+    const batch = await generateMultiPlanBatch(client, [{ planId: 'p1', qty: 2 }]);
+    expect(batch.samePassword).toBe(true);
+    expect(batch.codes.every(c => c.user === c.pass)).toBe(true);
   });
 
   it('menolak total lebih dari 8 voucher', async () => {
     const { client, added } = makeClient();
     await expect(
-      generateMultiPlanBatch(client, [{ planId: 'p1', qty: 9 }], false)
+      generateMultiPlanBatch(client, [{ planId: 'p1', qty: 9 }])
     ).rejects.toThrow();
     await expect(
       generateMultiPlanBatch(
@@ -102,9 +100,7 @@ describe('generateMultiPlanBatch', () => {
         [
           { planId: 'p1', qty: 5 },
           { planId: 'p2', qty: 4 },
-        ],
-        false
-      )
+        ])
     ).rejects.toThrow();
     expect(added).toHaveLength(0);
   });
@@ -113,7 +109,7 @@ describe('generateMultiPlanBatch', () => {
     const { client } = makeClient({ failOnCall: [2] });
     let caught: unknown;
     try {
-      await generateMultiPlanBatch(client, [{ planId: 'p1', qty: 4 }], false);
+      await generateMultiPlanBatch(client, [{ planId: 'p1', qty: 4 }]);
     } catch (e) {
       caught = e;
     }
@@ -128,7 +124,7 @@ describe('generateMultiPlanBatch', () => {
   it('semua gagal: tidak ada batch yang disimpan', async () => {
     const { client } = makeClient({ failOnCall: [1, 2] });
     await expect(
-      generateMultiPlanBatch(client, [{ planId: 'p1', qty: 2 }], false)
+      generateMultiPlanBatch(client, [{ planId: 'p1', qty: 2 }])
     ).rejects.toThrow(/semua/i);
     expect(batches).toHaveLength(0);
   });
@@ -143,7 +139,7 @@ describe('generateMultiPlanBatch', () => {
       price: 1000,
     });
     await expect(
-      generateMultiPlanBatch(client, [{ planId: 'p9', qty: 1 }], false)
+      generateMultiPlanBatch(client, [{ planId: 'p9', qty: 1 }])
     ).rejects.toThrow(/tidak ditemukan di router/);
     expect(added).toHaveLength(0);
   });

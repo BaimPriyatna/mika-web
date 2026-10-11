@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { VoucherGenerateDialog } from '../VoucherGenerateDialog';
 import type { VoucherPlan } from '../../../core/db/schema';
 
@@ -35,5 +35,29 @@ describe('VoucherGenerateDialog: beberapa paket dalam satu batch', () => {
     );
     fireEvent.click(screen.getByText('Tambah Paket Lain'));
     expect(screen.queryByText('Tambah Paket Lain')).toBeNull();
+  });
+
+  it('tidak ada pilihan mode password: kode voucher selalu username = password', () => {
+    render(
+      <VoucherGenerateDialog open onOpenChange={vi.fn()} plans={plans} onGenerate={vi.fn()} />
+    );
+    expect(screen.queryByText('Mode Password')).toBeNull();
+    expect(screen.queryByText('Berbeda')).toBeNull();
+    expect(screen.getByText(/dipakai sebagai username sekaligus password/)).toBeTruthy();
+  });
+
+  it('onGenerate dipanggil hanya dengan daftar paket (tanpa argumen mode)', async () => {
+    const onGenerate = vi.fn().mockResolvedValue(undefined);
+    render(
+      <VoucherGenerateDialog open onOpenChange={vi.fn()} plans={plans} onGenerate={onGenerate} />
+    );
+    // pilih paket pada baris pertama lalu lanjut ke konfirmasi
+    const select = document.querySelector('select') as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: 'p1' } });
+    fireEvent.click(screen.getByText(/Lanjut/));
+    fireEvent.click(screen.getByRole('button', { name: /Buat & Pratinjau Cetak/ }));
+    await waitFor(() => expect(onGenerate).toHaveBeenCalledTimes(1));
+    expect(onGenerate.mock.calls[0]).toHaveLength(1);
+    expect(onGenerate.mock.calls[0][0]).toEqual([{ planId: 'p1', qty: 8 }]);
   });
 });
