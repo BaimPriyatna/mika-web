@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="pragma" content="no-cache">
+  <meta http-equiv="expires" content="-1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>WiFi Sekolah</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+$(if chap-id)
+<form name="sendin" action="$(link-login-only)" method="post">
+  <input type="hidden" name="username" />
+  <input type="hidden" name="password" />
+  <input type="hidden" name="dst" value="$(link-orig)" />
+  <input type="hidden" name="popup" value="true" />
+</form>
+
+<script type="text/javascript" src="/md5.js"></script>
+<script type="text/javascript">
+<!--
+    function doLogin() {
+      document.sendin.username.value = document.login.username.value;
+      document.sendin.password.value = hexMD5('$(chap-id)' + document.login.password.value + '$(chap-challenge)');
+      document.sendin.submit();
+      return false;
+    }
+//-->
+</script>
+$(endif)
+
+<div class="card-wrapper">
+  <div class="card">
+    <div class="card-header">
+      <div class="school-logo">
+        <svg viewBox="0 0 24 24">
+          <path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/>
+        </svg>
+      </div>
+      <h1 class="school-name">WiFi Sekolah</h1>
+      <p class="school-sub">Silahkan masuk dengan akun Anda</p>
+    </div>
+
+    $(if error)
+    <div class="alert alert-danger">
+      $(error)
+    </div>
+    $(endif)
+
+    <form name="login" action="$(link-login-only)" method="post" $(if chap-id) onSubmit="return doLogin()" $(endif)>
+      <input type="hidden" name="dst" value="$(link-orig)" />
+      <input type="hidden" name="popup" value="true" />
+
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <input class="form-input" name="username" id="username" type="text" value="$(username)" placeholder="Username" autocomplete="username" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input class="form-input" name="password" id="password" type="password" placeholder="Password" autocomplete="current-password" />
+      </div>
+
+      <input class="btn btn-primary" type="submit" value="Masuk" />
+    </form>
+
+    $(if trial == 'yes')
+    <div style="margin-top: 14px; text-align: center; font-size: 13px; color: var(--text-muted);">
+      Tersedia akses uji coba, <a href="$(link-login-only)?dst=$(link-orig-esc)&amp;username=T-$(mac-esc)" style="color: var(--primary); font-weight: 600; text-decoration: none;">klik di sini</a>.
+    </div>
+    $(endif)
+
+    <div class="card-footer">
+      <div>WiFi Sekolah</div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    IP: $(ip) | MAC: $(mac)
+  </div>
+</div>
+
+<script type="text/javascript">
+<!--
+  document.login.username.focus();
+//-->
+</script>
+
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="pragma" content="no-cache">
+  <meta http-equiv="expires" content="-1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>WiFi Sekolah</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="text/javascript">
+  <!--
+  function openLogin() {
+    if (window.name != 'hotspot_logout') return true;
+    open('$(link-login)', '_blank', '');
+    window.close();
+    return false;
+  }
+  //-->
+  </script>
+</head>
+<body>
+
+<div class="card-wrapper">
+  <div class="card">
+    <div class="card-header">
+      <div class="school-logo">
+        <svg viewBox="0 0 24 24">
+          <path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/>
+        </svg>
+      </div>
+      <h1 class="school-name">SESI TELAH BERAKHIR</h1>
+      <p class="school-sub">Anda telah berhasil keluar dari jaringan hotspot</p>
+    </div>
+
+    <table class="data-table">
+      <tr>
+        <td class="label">Nama Pengguna</td>
+        <td class="value">$(username)</td>
+      </tr>
+      <tr>
+        <td class="label">Alamat IP</td>
+        <td class="value">$(ip)</td>
+      </tr>
+      <tr>
+        <td class="label">Alamat MAC</td>
+        <td class="value">$(mac)</td>
+      </tr>
+      <tr>
+        <td class="label">Lama Sesi Terhubung</td>
+        <td class="value">$(uptime)</td>
+      </tr>
+      $(if session-time-left)
+      <tr>
+        <td class="label">Sisa Waktu</td>
+        <td class="value">$(session-time-left)</td>
+      </tr>
+      $(endif)
+      <tr>
+        <td class="label">Total Unggah / Unduh</td>
+        <td class="value">$(bytes-in-nice) / $(bytes-out-nice)</td>
+      </tr>
+    </table>
+
+    <form action="$(link-login)" name="login" onSubmit="return openLogin()">
+      <input class="btn btn-primary" type="submit" value="Masuk Kembali (Log In)" />
+    </form>
+
+    <div class="card-footer">
+      <div>WiFi Sekolah</div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    RouterOS Hotspot Service
+  </div>
+</div>
+
+</body>
+</html>

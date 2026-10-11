@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="refresh" content="2; url=$(link-redirect)">
+  <meta http-equiv="pragma" content="no-cache">
+  <meta http-equiv="expires" content="-1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>WiFi Sekolah</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="text/javascript">
+  <!--
+  function startClock() {
+    $(if popup == 'true')
+    open('$(link-status)', 'hotspot_status', 'toolbar=0,location=0,directories=0,status=0,menubars=0,resizable=1,width=320,height=420');
+    $(endif)
+    location.href = unescape('$(link-redirect-esc)');
+  }
+  //-->
+  </script>
+</head>
+<body onLoad="startClock()">
+
+<div class="card-wrapper">
+  <div class="card" style="text-align: center;">
+    <div class="school-logo">
+      <svg viewBox="0 0 24 24">
+        <path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/>
+      </svg>
+    </div>
+    <h1 class="school-name">LOGIN BERHASIL</h1>
+    <p class="school-sub">Perangkat Anda telah terhubung ke jaringan</p>
+
+    <div class="alert alert-success" style="margin-top: 18px; text-align: center;">
+      Sedang mengalihkan ke situs tujuan Anda...
+    </div>
+
+    <a href="$(link-redirect)" class="btn btn-primary">
+      Klik di Sini Jika Tidak Beralih Otomatis
+    </a>
+
+    <a href="$(link-status)" class="btn btn-secondary">
+      Lihat Status Koneksi
+    </a>
+
+    <div class="card-footer">
+      <div>WiFi Sekolah</div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    RouterOS Hotspot Service
+  </div>
+</div>
+
+</body>
+</html>

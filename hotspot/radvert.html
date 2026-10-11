@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="refresh" content="2; url=$(link-orig)">
+  <meta http-equiv="pragma" content="no-cache">
+  <meta http-equiv="expires" content="-1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Pengumuman / Informasi Hotspot</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="text/javascript">
+  <!--
+  var popup = '';
+  function openOrig() {
+    if (window.focus) popup.focus();
+    location.href = unescape('$(link-orig-esc)');
+  }
+  function openAd() {
+    location.href = unescape('$(link-redirect-esc)');
+  }
+  function openAdvert() {
+    if (window.name != 'hotspot_advert') {
+      popup = open('$(link-redirect)', 'hotspot_advert', '');
+      setTimeout("openOrig()", 1000);
+      return;
+    }
+    setTimeout("openAd()", 1000);
+  }
+  //-->
+  </script>
+</head>
+<body onLoad="openAdvert()">
+
+<div class="card-wrapper">
+  <div class="card" style="text-align: center;">
+    <div class="school-logo">
+      <svg viewBox="0 0 24 24">
+        <path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/>
+      </svg>
+    </div>
+    <h1 class="school-name">INFORMASI PENGGUNA</h1>
+    <p class="school-sub">Sedang memuat pengumuman jaringan...</p>
+
+    <p style="font-size: 13px; color: var(--text-muted); margin: 18px 0; line-height: 1.5;">
+      Jika halaman tidak terbuka secara otomatis, silakan buka melalui tombol di bawah:
+    </p>
+
+    <a href="$(link-redirect)" target="hotspot_advert" class="btn btn-primary">
+      Buka Informasi / Iklan
+    </a>
+
+    <a href="$(link-orig)" class="btn btn-secondary">
+      Lanjutkan ke Situs Tujuan
+    </a>
+
+    <div class="card-footer">
+      <div>WiFi Sekolah</div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    RouterOS Hotspot Service
+  </div>
+</div>
+
+</body>
+</html>
