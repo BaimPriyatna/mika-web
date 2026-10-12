@@ -93,7 +93,7 @@ describe('hotspot/login.html: satu kode voucher', () => {
     expect(visible[0].name).toBe('username');
     expect(form.querySelector('input[type="password"]')).toBeNull();
     expect((form.querySelector('input[name="password"]') as HTMLInputElement).type).toBe('hidden');
-    expect(doc.body.textContent).toContain('Kode Voucher');
+    expect(doc.body.textContent).toContain('Kode Akun');
   });
 
   it('mode CHAP: username = kode, password = MD5(chap-id + kode + challenge)', () => {
@@ -174,5 +174,34 @@ describe('hotspot/login.html: satu kode voucher', () => {
   it('tidak ada variabel template RouterOS yang tertinggal di hasil render', () => {
     const { html } = load({ ...CHAP, ip: '192.168.100.5', mac: 'AA:BB' });
     expect(html).not.toMatch(/\$\((if|elif|else|endif)/);
+  });
+
+  it('teks halaman menyebut "kode akun", bukan "voucher"', () => {
+    const { doc, html } = load(CHAP);
+    expect(doc.querySelector('label[for="username"]')?.textContent).toBe('Kode Akun');
+    expect(doc.getElementById('username')?.getAttribute('placeholder')).toBe('Masukkan kode akun');
+    expect(html).not.toMatch(/voucher/i);
+  });
+});
+
+describe('halaman hotspot: merek WIFI TKJ', () => {
+  const pages = ['login', 'alogin', 'error', 'status', 'logout', 'radvert'];
+
+  it.each(pages)('%s.html memakai merek WIFI TKJ dan tanpa kata "voucher"/"Sekolah"', page => {
+    const src = readFileSync(resolve(dir, `${page}.html`), 'utf-8');
+    // radvert.html punya judul sendiri ("Pengumuman / Informasi Hotspot"); footer-nya tetap WIFI TKJ
+    if (page !== 'radvert') expect(src).toMatch(/<title>WIFI TKJ<\/title>/);
+    expect(src).toContain('<div>WIFI TKJ</div>');
+    expect(src).not.toMatch(/voucher/i);
+    expect(src).not.toMatch(/sekolah/i);
+  });
+
+  it('judul kartu login adalah WIFI TKJ', () => {
+    const { doc } = load(CHAP);
+    expect(doc.querySelector('h1.school-name')?.textContent).toBe('WIFI TKJ');
+  });
+
+  it('style.css tidak lagi menyebut nama lama', () => {
+    expect(readFileSync(resolve(dir, 'style.css'), 'utf-8')).not.toMatch(/sekolah/i);
   });
 });
