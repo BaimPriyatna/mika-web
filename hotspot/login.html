@@ -19,17 +19,24 @@ $(if chap-id)
 </form>
 
 <script type="text/javascript" src="/md5.js"></script>
+$(endif)
 <script type="text/javascript">
 <!--
+    // Satu kode voucher: password selalu sama dengan username.
     function doLogin() {
-      document.sendin.username.value = document.login.username.value;
-      document.sendin.password.value = hexMD5('$(chap-id)' + document.login.password.value + '$(chap-challenge)');
+      var code = document.login.username.value;
+$(if chap-id)
+      document.sendin.username.value = code;
+      document.sendin.password.value = hexMD5('$(chap-id)' + code + '$(chap-challenge)');
       document.sendin.submit();
       return false;
+$(else)
+      document.login.password.value = code;
+      return true;
+$(endif)
     }
 //-->
 </script>
-$(endif)
 
 <div class="card-wrapper">
   <div class="card">
@@ -40,7 +47,7 @@ $(endif)
         </svg>
       </div>
       <h1 class="school-name">WiFi Sekolah</h1>
-      <p class="school-sub">Silahkan masuk dengan akun Anda</p>
+      <p class="school-sub">Masukkan kode voucher Anda</p>
     </div>
 
     $(if error)
@@ -49,18 +56,15 @@ $(endif)
     </div>
     $(endif)
 
-    <form name="login" action="$(link-login-only)" method="post" $(if chap-id) onSubmit="return doLogin()" $(endif)>
+    <form name="login" action="$(link-login-only)" method="post" onSubmit="return doLogin()">
       <input type="hidden" name="dst" value="$(link-orig)" />
       <input type="hidden" name="popup" value="true" />
 
-      <div class="form-group">
-        <label class="form-label" for="username">Username</label>
-        <input class="form-input" name="username" id="username" type="text" value="$(username)" placeholder="Username" autocomplete="username" />
-      </div>
+      <input type="hidden" name="password" value="" />
 
       <div class="form-group">
-        <label class="form-label" for="password">Password</label>
-        <input class="form-input" name="password" id="password" type="password" placeholder="Password" autocomplete="current-password" />
+        <label class="form-label" for="username">Kode Voucher</label>
+        <input class="form-input" name="username" id="username" type="text" value="$(username)" placeholder="Masukkan kode voucher" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" />
       </div>
 
       <input class="btn btn-primary" type="submit" value="Masuk" />
