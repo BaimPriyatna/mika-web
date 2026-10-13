@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Beli Akun - WIFI TKJ</title>
+  <link rel="stylesheet" href="/beli/shop.css" />
+</head>
+<body>
+  <main class="card" id="app" aria-live="polite">
+    <header class="head">
+      <h1>WIFI TKJ</h1>
+      <p class="sub">Beli akun WiFi</p>
+    </header>
+
+    <!-- Daftar paket -->
+    <section id="view-packages" hidden>
+      <p class="hint">Pilih paket, lalu bayar dengan QRIS. Akun muncul otomatis setelah pembayaran diterima.</p>
+      <div id="package-list" class="packages"></div>
+      <p id="packages-empty" class="notice" hidden>Penjualan online belum tersedia. Silakan beli akun langsung dari petugas.</p>
+    </section>
+
+    <!-- Menunggu pembayaran -->
+    <section id="view-pay" hidden>
+      <p class="summary"><strong id="pay-package"></strong><span id="pay-duration" class="muted"></span></p>
+      <p class="amount" id="pay-amount"></p>
+      <div class="qr-box"><img id="pay-qr" alt="Kode QRIS pembayaran" width="260" height="260" /></div>
+      <p class="timer">Bayar sebelum <strong id="pay-timer">--:--</strong></p>
+      <div class="notice info">
+        <strong>Cara bayar</strong>
+        <ol>
+          <li>Buka aplikasi e-wallet atau mobile banking di <em>perangkat yang punya internet</em> (data seluler atau HP lain). WiFi ini belum terhubung ke internet sebelum akun aktif.</li>
+          <li>Pilih Scan / QRIS, lalu pindai kode di atas.</li>
+          <li>Setelah berhasil, halaman ini otomatis menampilkan akun Anda.</li>
+        </ol>
+      </div>
+      <p class="muted small">Kode pesanan: <span id="pay-ref" class="mono"></span></p>
+      <button type="button" class="btn secondary" id="btn-cancel-view">Pilih paket lain</button>
+    </section>
+
+    <!-- Diproses -->
+    <section id="view-processing" hidden>
+      <p class="status ok">Pembayaran diterima</p>
+      <p id="processing-msg" class="notice">Akun sedang diproses...</p>
+      <p class="muted small">Kode pesanan: <span id="processing-ref" class="mono"></span></p>
+    </section>
+
+    <!-- Berhasil -->
+    <section id="view-ready" hidden>
+      <p class="status ok">Pembayaran berhasil</p>
+      <p class="summary"><strong id="ready-package"></strong><span id="ready-duration" class="muted"></span></p>
+      <p class="label">Kode akun Anda</p>
+      <p class="code mono" id="ready-code"></p>
+      <button type="button" class="btn" id="btn-copy">Salin kode</button>
+      <p id="copy-note" class="muted small" hidden>Kode tersalin.</p>
+      <a class="btn secondary" id="btn-login" href="#" hidden>Buka halaman login WiFi</a>
+      <div class="notice info">
+        Masukkan kode ini di kolom <strong>Kode Akun</strong> pada halaman login. Satu akun hanya untuk satu perangkat. Simpan atau foto kode ini.
+      </div>
+    </section>
+
+    <!-- Gagal / kedaluwarsa -->
+    <section id="view-failed" hidden>
+      <p class="status bad" id="failed-title">Pembayaran tidak berhasil</p>
+      <p class="notice" id="failed-msg"></p>
+      <button type="button" class="btn" id="btn-retry">Pilih paket lagi</button>
+    </section>
+
+    <p id="error-banner" class="notice error" role="alert" hidden></p>
+  </main>
+  <script src="/beli/shop.js"></script>
+</body>
+</html>

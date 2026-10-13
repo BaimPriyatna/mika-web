@@ -8,6 +8,7 @@ import { Profil } from './pages/Profil';
 import { Perangkat } from './pages/Perangkat';
 import { Setup } from './pages/Setup';
 import { Pengaturan } from './pages/Pengaturan';
+import { PenjualanOnline } from './pages/PenjualanOnline';
 
 export const router = createBrowserRouter([
   {
@@ -41,6 +42,10 @@ export const router = createBrowserRouter([
       {
         path: 'setup',
         element: <Setup />,
+      },
+      {
+        path: 'penjualan',
+        element: <PenjualanOnline />,
       },
       {
         path: 'pengaturan',

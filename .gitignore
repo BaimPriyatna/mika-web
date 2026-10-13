@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Rahasia dan data lokal penjualan online
+.env
+.env.*
+!.env.example
+data/

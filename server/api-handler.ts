@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { scanMndp } from './mndp.ts';
 import { globalRouterManager } from './router-manager.ts';
 import type { ConnectRequest } from './types.ts';
+import { adminAllowedIpsFromEnv, isAdminRequest } from './security.ts';
 
 export async function handleApiRequest(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
   const url = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
@@ -12,9 +13,16 @@ export async function handleApiRequest(req: IncomingMessage, res: ServerResponse
   }
 
   res.setHeader('Content-Type', 'application/json');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE, PATCH');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Cache-Control', 'no-store');
+
+  // API kontrol router hanya untuk administrator di perangkat server (atau IP di ADMIN_ALLOWED_IPS).
+  // Halaman beli publik berbagi server yang sama, jadi tanpa penjagaan ini pelanggan bisa memakai sesi router admin.
+  // Tidak ada header CORS: aplikasi admin sama-origin.
+  if (!isAdminRequest(req, adminAllowedIpsFromEnv())) {
+    res.statusCode = 403;
+    res.end(JSON.stringify({ success: false, error: 'Akses administrator hanya dari perangkat server' }));
+    return true;
+  }
 
   if (req.method === 'OPTIONS') {
     res.statusCode = 204;

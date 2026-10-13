@@ -1,75 +1,30 @@
-# React + TypeScript + Vite
+# WIFI TKJ - Manajemen Hotspot MikroTik
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplikasi web (React + TypeScript + Vite) untuk mengelola hotspot MikroTik RouterOS v6/v7 satu router:
+profil dan paket, pembuatan akun (kode tunggal: username = password), cetak PDF A4 (8 per halaman),
+pemantauan perangkat, setup timer di router, dan penjualan akun online lewat Midtrans QRIS.
 
-Currently, two official plugins are available:
+## Menjalankan
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+npm install
+npm run dev        # admin di http://localhost:5173 (hanya localhost)
+npm test           # semua tes
+npm run build && npx vite preview --host 0.0.0.0 --port 4173   # agar halaman /beli bisa dijangkau pelanggan
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Backend (klien API binary/REST, penjualan online) berjalan sebagai plugin Vite di `server/`, sehingga
+`vite build` saja belum cukup untuk produksi; gunakan `vite preview` atau proses Node yang setara.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Dokumentasi
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- `DEV-SPEC.md`, `DESIGN.md`, `tasks.md`: spesifikasi, desain, dan progres.
+- `docs/payment-midtrans.md`: penjualan online (setup, keamanan, webhook, Walled Garden, pemulihan, yang belum teruji).
+- `docs/spike.md`: hasil uji awal ke router asli.
+- `hotspot/`: halaman captive portal (dipasang manual ke router). `shop/`: halaman beli pelanggan.
+- `.env.example`: konfigurasi server (Midtrans, kredensial router, dsb.).
 
-```
+## Keamanan singkat
+
+API kontrol router dan API admin penjualan hanya melayani localhost (atau `ADMIN_ALLOWED_IPS`) dan menolak
+trafik yang membawa header proxy. Server key Midtrans dan kredensial router hanya ada di `.env` server.

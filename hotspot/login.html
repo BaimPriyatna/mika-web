@@ -76,6 +76,11 @@ $(endif)
     </div>
     $(endif)
 
+    <div id="beli-wrap" style="display: none; margin-top: 16px; text-align: center;">
+      <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Belum punya akun?</div>
+      <a id="beli-link" class="btn btn-secondary" href="#" style="display: block; text-decoration: none;">Beli Akun</a>
+    </div>
+
     <div class="card-footer">
       <div>WIFI TKJ</div>
     </div>
@@ -89,6 +94,14 @@ $(endif)
 <script type="text/javascript">
 <!--
   document.login.username.focus();
+
+  // Alamat halaman beli akun (backend WIFI TKJ), mis. 'http://192.168.20.1:4173/beli'.
+  // Alamat ini WAJIB sudah ada di Walled Garden router. Kosongkan untuk menyembunyikan tombol.
+  var SHOP_URL = '';
+  if (SHOP_URL) {
+    document.getElementById('beli-link').href = SHOP_URL;
+    document.getElementById('beli-wrap').style.display = 'block';
+  }
 //-->
 </script>
 

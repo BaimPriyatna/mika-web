@@ -1,3 +1,6 @@
+# WIFI TKJ: pesan kesalahan login hotspot dalam bahasa Indonesia (istilah "akun").
+# Daftar kunci dan variabel $(...) sama dengan berkas bawaan MikroTik; hanya teksnya yang diterjemahkan.
+#
 # This file contains error messages which are shown to user, when http/https
 # login is used.
 # These messages can be changed to make user interface more friendly, including
@@ -12,47 +15,47 @@
 # It should never happen. If it will, error page will be shown
 # displaying this error message (error-orig will describe what has happened)
 
-internal-error = internal error ($(error-orig))
+internal-error = terjadi kesalahan internal ($(error-orig))
 
 # config-error
 # Should never happen if hotspot is configured properly.
 
-config-error = configuration error ($(error-orig))
+config-error = kesalahan konfigurasi hotspot ($(error-orig))
 
 # not-logged-in
 # Will happen, if status or logout page is requested by user,
 # which actually is not logged in
 
-not-logged-in = you are not logged in (ip $(ip))
+not-logged-in = Anda belum masuk (IP $(ip))
 
 # ippool-empty
 # IP address for user is to be assigned from ip pool, but there are no more
 # addresses in that pool
 
-ippool-empty = cannot assign ip address - no more free addresses from pool
+ippool-empty = tidak ada alamat IP yang tersedia, silakan coba lagi nanti
 
 # shutting-down
 # When shutdown is executed, new clients are not accepted
 
-shutting-down = hotspot service is shutting down
+shutting-down = layanan hotspot sedang dimatikan
 
 # user-session-limit
 # If user profile has limit of shared-users, then this error will be shown
 # after reaching this limit
 
-user-session-limit = no more sessions are allowed for user $(username)
+user-session-limit = akun $(username) sedang dipakai di perangkat lain
 
 # license-session-limit
 # Depending on licence number of active hotspot clients is limited to
 # one or another amount. If this limit is reached, following error is displayed.
 
-license-session-limit = session limit reached ($(error-orig))
+license-session-limit = jumlah pengguna hotspot sudah penuh ($(error-orig))
 
 # wrong-mac-username
 # If username looks like MAC address (12:34:56:78:9a:bc), but is not
 # a MAC address of this client, login is rejected
 
-wrong-mac-username = invalid username ($(username)): this MAC address is not yours
+wrong-mac-username = akun tidak valid ($(username)): alamat MAC ini bukan milik perangkat Anda
 
 # chap-missing
 # If http-chap login method is used, but hotspot program does not receive
@@ -65,38 +68,38 @@ wrong-mac-username = invalid username ($(username)): this MAC address is not you
 # If JavaScript is enabled and login.html page is valid,
 # then retrying to login usually fixes this problem.
 
-chap-missing = web browser did not send challenge response (try again, enable JavaScript)
+chap-missing = browser tidak mengirim jawaban verifikasi (coba lagi dan aktifkan JavaScript)
 
 # invalid-username
 # Most general case of invalid username or password. If RADIUS server
 # has sent an error string with Access-Reject message, then it will
 # override this setting.
 
-invalid-username = invalid username or password
+invalid-username = Akun tidak valid atau sudah kedaluwarsa
 
 # invalid-mac
 # Local users (on hotspot server) can be bound to some MAC address. If login
 # from different MAC is tried, this error message will be shown.
 
-invalid-mac = user $(username) is not allowed to log in from this MAC address
+invalid-mac = akun $(username) tidak diizinkan masuk dari perangkat ini (alamat MAC berbeda)
 
 # uptime-limit, traffic-limit
 # For local hotspot users in case if limits are reached
 
-uptime-limit = user $(username) has reached uptime limit
-traffic-limit = user $(username) has reached traffic limit
+uptime-limit = masa pakai akun $(username) sudah habis
+traffic-limit = kuota akun $(username) sudah habis
 
 # radius-timeout
 # User is authenticated by RADIUS server, but no response is received from it,
 # following error will be shown.
 
-radius-timeout = RADIUS server is not responding
+radius-timeout = server RADIUS tidak merespons
 
 # auth-in-progress
 # Authorization in progress. Client already has issued an authorization request
 # which is not yet complete.
 
-auth-in-progress = already authorizing, retry later
+auth-in-progress = proses masuk sedang berjalan, coba lagi sebentar
 
 # radius-reply
 # Radius server returned some custom error message

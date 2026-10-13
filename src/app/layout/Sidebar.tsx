@@ -7,6 +7,7 @@ import {
   Laptop,
   Wrench,
   Settings,
+  ShoppingCart,
   ChevronLeft,
   ChevronRight,
   type LucideProps,
@@ -25,6 +26,7 @@ const navItems: NavItem[] = [
   { path: '/paket', label: strings.nav.paket, icon: Package },
   { path: '/profil', label: strings.nav.profil, icon: UserCog },
   { path: '/perangkat', label: strings.nav.perangkat, icon: Laptop },
+  { path: '/penjualan', label: strings.nav.penjualanOnline, icon: ShoppingCart },
   { path: '/setup', label: strings.nav.setupRouter, icon: Wrench },
   { path: '/pengaturan', label: strings.nav.pengaturan, icon: Settings },
 ];

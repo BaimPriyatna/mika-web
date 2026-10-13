@@ -846,3 +846,25 @@
 ---
 
 **End of tasks.md**
+
+## Phase 10 — Penjualan Online (Midtrans QRIS)
+
+Rincian dan batasan: lihat `docs/payment-midtrans.md`. Semua centang di bawah berarti kode dan tes otomatis (mock) selesai.
+Item bertanda `[ ]` belum dikerjakan atau belum diuji pada sistem sungguhan.
+
+- [x] Audit backend: plugin Vite, klien API/REST, router-manager, service voucher
+- [x] Penjagaan API admin (`/api/router/*`, `/api/shop-admin/*`): hanya localhost/IP diizinkan, tolak header proxy, cek Origin, hapus CORS terbuka
+- [x] Penyimpanan transaksi persisten (JSON atomik, constraint unik, retensi) dengan status pembayaran dan penerbitan terpisah
+- [x] Abstraksi `PaymentGateway` + adapter Midtrans (charge QRIS, verifikasi tanda tangan, status API)
+- [x] Penerbit akun idempoten (kode disimpan sebelum dibuat, cek akun ada, verifikasi sesudah dibuat), retry dengan backoff, pemulihan setelah crash
+- [x] Cek status berkala ke Midtrans sebagai cadangan webhook
+- [x] Halaman beli `/beli` (daftar paket, QRIS, status, kode akun) dengan CSP ketat
+- [x] Halaman admin Penjualan Online (paket, status konfigurasi, transaksi, coba ulang)
+- [x] `login.html`: tombol Beli Akun; `errors.txt`: pesan error Indonesia ("akun")
+- [x] Tes: gateway, store, issuer, service, HTTP, keamanan, halaman beli, hotspot
+- [ ] Uji dengan Midtrans sandbox sungguhan (charge, notifikasi, status)
+- [ ] Uji penerbitan akun di router v6 dan v7 sungguhan
+- [ ] Uji Walled Garden + halaman beli dari ponsel di captive portal
+- [ ] Putuskan perilaku pembelian di luar jam operasional
+- [ ] Uji beban
+

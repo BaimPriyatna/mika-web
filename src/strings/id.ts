@@ -15,6 +15,7 @@ export const strings = {
     paket: 'Paket',
     profil: 'Profil',
     perangkat: 'Perangkat',
+    penjualanOnline: 'Penjualan Online',
     setupRouter: 'Setup Router',
     pengaturan: 'Pengaturan',
   },

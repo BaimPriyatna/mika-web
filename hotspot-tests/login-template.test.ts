@@ -59,8 +59,8 @@ function render(src: string, vars: Vars): string {
   return out.replace(/\$\(([\w-]+)\)/g, (_, name: string) => vars[name] ?? '');
 }
 
-function load(vars: Vars) {
-  const html = render(loginSrc, vars);
+function load(vars: Vars, src: string = loginSrc) {
+  const html = render(src, vars);
   const dom = new JSDOM(html, { runScripts: 'outside-only', url: 'http://hotspot.tkj/login' });
   const win = dom.window as unknown as Window & Record<string, unknown> & { eval: (s: string) => unknown };
   const doc = win.document;
@@ -203,5 +203,31 @@ describe('halaman hotspot: merek WIFI TKJ', () => {
 
   it('style.css tidak lagi menyebut nama lama', () => {
     expect(readFileSync(resolve(dir, 'style.css'), 'utf-8')).not.toMatch(/sekolah/i);
+  });
+});
+
+describe('hotspot/login.html: tombol Beli Akun', () => {
+  it('tersembunyi selama SHOP_URL kosong (bawaan)', () => {
+    const { doc } = load(CHAP);
+    expect(doc.getElementById('beli-wrap')?.getAttribute('style')).toContain('display: none');
+    expect(doc.getElementById('beli-link')?.getAttribute('href')).toBe('#');
+  });
+
+  it('tampil dan menaut ke alamat halaman beli setelah SHOP_URL diisi', () => {
+    const src = loginSrc.replace("var SHOP_URL = '';", "var SHOP_URL = 'http://192.168.20.1:4173/beli';");
+    const { doc } = load(CHAP, src);
+    expect((doc.getElementById('beli-wrap') as HTMLElement).style.display).toBe('block');
+    expect(doc.getElementById('beli-link')?.getAttribute('href')).toBe('http://192.168.20.1:4173/beli');
+    expect(doc.getElementById('beli-link')?.textContent).toBe('Beli Akun');
+  });
+
+  it('menyebut "akun" dan tidak memuat rahasia pembayaran apa pun', () => {
+    expect(loginSrc).not.toMatch(/server[-_ ]?key|midtrans|SB-Mid/i);
+    expect(loginSrc).not.toMatch(/voucher/i);
+  });
+
+  it('pesan error dari router (sudah diterjemahkan errors.txt) tampil apa adanya', () => {
+    const { doc } = load({ ...CHAP, error: 'Akun tidak valid atau sudah kedaluwarsa' });
+    expect(doc.querySelector('.alert-danger')?.textContent?.trim()).toBe('Akun tidak valid atau sudah kedaluwarsa');
   });
 });
