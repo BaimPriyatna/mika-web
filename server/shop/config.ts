@@ -18,6 +18,8 @@ export interface ShopConfig {
   /** Kredensial router milik SERVER. Tidak pernah dikirim ke browser maupun disimpan di database transaksi. */
   router: RouterCredentials | null;
   adminAllowedIps: string[];
+  /** Asal (origin) halaman hotspot yang boleh memanggil API publik /api/shop/* dari browser pelanggan (CORS) */
+  shopAllowedOrigins: string[];
   retry: { intervalMs: number; maxAttempts: number; baseDelayMs: number; maxDelayMs: number };
   retentionDays: number;
 }
@@ -25,6 +27,24 @@ export interface ShopConfig {
 function int(value: string | undefined, fallback: number, min: number, max: number): number {
   const n = Number(value);
   return Number.isFinite(n) && n >= min && n <= max ? Math.floor(n) : fallback;
+}
+
+/** Normalisasi daftar origin: harus berbentuk persis "skema://host[:port]" (tanpa path, tanpa garis miring akhir). */
+export function parseOrigins(value: string | undefined): string[] {
+  const out: string[] = [];
+  for (const raw of (value ?? '').split(',')) {
+    const text = raw.trim();
+    if (!text) continue;
+    try {
+      const url = new URL(text);
+      if ((url.protocol === 'http:' || url.protocol === 'https:') && url.origin === text.replace(/\/+$/, '').toLowerCase()) {
+        out.push(url.origin);
+      }
+    } catch {
+      // origin tidak valid diabaikan
+    }
+  }
+  return [...new Set(out)];
 }
 
 export function loadShopConfig(env: Record<string, string | undefined> = process.env): ShopConfig {
@@ -53,6 +73,7 @@ export function loadShopConfig(env: Record<string, string | undefined> = process
       .split(',')
       .map(s => s.trim())
       .filter(Boolean),
+    shopAllowedOrigins: parseOrigins(env.SHOP_ALLOWED_ORIGINS),
     retry: {
       intervalMs: int(env.SHOP_RETRY_INTERVAL_MS, 30_000, 1000, 600_000),
       maxAttempts: int(env.SHOP_RETRY_MAX_ATTEMPTS, 30, 1, 1000),
@@ -71,6 +92,7 @@ export function describeConfig(config: ShopConfig) {
     routerConfigured: config.router !== null,
     routerHost: config.router?.host ?? null,
     hotspotLoginUrlConfigured: config.hotspotLoginUrl.length > 0,
+    corsOriginsConfigured: config.shopAllowedOrigins.length,
     retentionDays: config.retentionDays,
   };
 }

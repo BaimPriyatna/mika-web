@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "sync:hotspot": "node scripts/hotspot-shop.mjs",
+    "check:hotspot": "node scripts/hotspot-shop.mjs --check"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.104.1",

@@ -21,6 +21,7 @@ export function baseConfig(overrides: Partial<ShopConfig> = {}): ShopConfig {
     hotspotLoginUrl: 'http://hotspot.tkj/login',
     router: null,
     adminAllowedIps: [],
+    shopAllowedOrigins: ['http://hotspot.tkj', 'http://192.168.100.1'],
     retry: { intervalMs: 1000, maxAttempts: 4, baseDelayMs: 1000, maxDelayMs: 8000 },
     retentionDays: 90,
     ...overrides,

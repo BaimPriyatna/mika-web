@@ -4,23 +4,28 @@
 (function () {
   'use strict';
 
+  // Konfigurasi opsional (diatur oleh hotspot/beli-config.js saat halaman ini disajikan dari router):
+  //  - SHOP_API_BASE: alamat backend (mis. http://192.168.20.1:4173). Tidak diatur = backend yang sama (halaman /beli).
+  //  - SHOP_LOGIN_URL: alamat halaman login hotspot jika server tidak mengirimkannya.
+  var API_BASE = typeof window.SHOP_API_BASE === 'string' ? window.SHOP_API_BASE.replace(/\/+$/, '') : null;
+  var NOT_CONFIGURED = API_BASE === '';
   var STORAGE_KEY = 'wifitkj_order';
   var POLL_MS = 3000;
-  var $ = function (id) { return document.getElementById(id); };
+  var byId = function (id) { return document.getElementById(id); };
 
   var views = ['packages', 'pay', 'processing', 'ready', 'failed'];
   var pollTimer = null;
   var tickTimer = null;
   var currentOrder = null;
-  var loginUrl = null;
+  var loginUrl = window.SHOP_LOGIN_URL || null;
   var busy = false;
 
   function show(name) {
-    views.forEach(function (v) { $('view-' + v).hidden = v !== name; });
+    views.forEach(function (v) { byId('view-' + v).hidden = v !== name; });
   }
 
   function setError(text) {
-    var el = $('error-banner');
+    var el = byId('error-banner');
     el.textContent = text || '';
     el.hidden = !text;
   }
@@ -41,7 +46,7 @@
       opts.headers['Content-Type'] = 'application/json';
       opts.body = JSON.stringify(body);
     }
-    return fetch(path, opts).then(function (res) {
+    return fetch((API_BASE || '') + path, opts).then(function (res) {
       return res.json().catch(function () { return {}; }).then(function (json) {
         if (!res.ok || json.success === false) {
           var err = new Error(json.error || 'Terjadi kesalahan. Coba lagi.');
@@ -80,11 +85,11 @@
     currentOrder = null;
     setError('');
     api('GET', '/api/shop/packages').then(function (data) {
-      loginUrl = data.loginUrl || null;
-      var list = $('package-list');
+      loginUrl = data.loginUrl || loginUrl;
+      var list = byId('package-list');
       list.textContent = '';
       var packages = data.packages || [];
-      $('packages-empty').hidden = packages.length > 0;
+      byId('packages-empty').hidden = packages.length > 0;
       packages.forEach(function (p) {
         var btn = document.createElement('button');
         btn.type = 'button';
@@ -112,7 +117,7 @@
       show('packages');
     }).catch(function (err) {
       show('packages');
-      $('packages-empty').hidden = false;
+      byId('packages-empty').hidden = false;
       setError(err.message);
     });
   }
@@ -153,25 +158,25 @@
     setError('');
 
     if (order.state === 'waiting_payment') {
-      $('pay-package').textContent = order.packageName;
-      $('pay-duration').textContent = order.durationLabel ? order.durationLabel : '';
-      $('pay-amount').textContent = rupiah(order.amount);
-      $('pay-ref').textContent = order.id;
-      if (order.qrDataUrl) $('pay-qr').src = order.qrDataUrl;
+      byId('pay-package').textContent = order.packageName;
+      byId('pay-duration').textContent = order.durationLabel ? order.durationLabel : '';
+      byId('pay-amount').textContent = rupiah(order.amount);
+      byId('pay-ref').textContent = order.id;
+      if (order.qrDataUrl) byId('pay-qr').src = order.qrDataUrl;
       show('pay');
       startTick(order.expiresAt);
       schedulePoll(order.id);
     } else if (order.state === 'processing') {
-      $('processing-msg').textContent = order.message || 'Akun sedang diproses...';
-      $('processing-ref').textContent = order.id;
+      byId('processing-msg').textContent = order.message || 'Akun sedang diproses...';
+      byId('processing-ref').textContent = order.id;
       show('processing');
       schedulePoll(order.id);
     } else if (order.state === 'ready') {
       stopTimers();
-      $('ready-package').textContent = order.packageName;
-      $('ready-duration').textContent = order.durationLabel ? order.durationLabel : '';
-      $('ready-code').textContent = order.code || '';
-      var link = $('btn-login');
+      byId('ready-package').textContent = order.packageName;
+      byId('ready-duration').textContent = order.durationLabel ? order.durationLabel : '';
+      byId('ready-code').textContent = order.code || '';
+      var link = byId('btn-login');
       if (loginUrl) {
         link.href = loginUrl; // tanpa kredensial di URL; kode disalin/ditempel manual
         link.hidden = false;
@@ -180,8 +185,8 @@
     } else {
       stopTimers();
       var expired = order.state === 'expired';
-      $('failed-title').textContent = expired ? 'Waktu pembayaran habis' : 'Pembayaran tidak berhasil';
-      $('failed-msg').textContent = expired
+      byId('failed-title').textContent = expired ? 'Waktu pembayaran habis' : 'Pembayaran tidak berhasil';
+      byId('failed-msg').textContent = expired
         ? 'Kode QRIS sudah kedaluwarsa. Jika Anda sudah membayar, tunggu sebentar atau hubungi petugas dengan kode pesanan ' + order.id + '. Jika belum, pilih paket lagi.'
         : 'Pesanan dibatalkan atau ditolak. Jika saldo Anda terpotong, hubungi petugas dengan kode pesanan ' + order.id + '.';
       show('failed');
@@ -194,7 +199,7 @@
       var left = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
       var m = Math.floor(left / 60);
       var s = left % 60;
-      $('pay-timer').textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+      byId('pay-timer').textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
     }
     tick();
     tickTimer = setInterval(tick, 1000);
@@ -220,9 +225,9 @@
   }
 
   // ---- tombol
-  $('btn-copy').addEventListener('click', function () {
-    var code = $('ready-code').textContent;
-    var done = function () { $('copy-note').hidden = false; };
+  byId('btn-copy').addEventListener('click', function () {
+    var code = byId('ready-code').textContent;
+    var done = function () { byId('copy-note').hidden = false; };
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(code).then(done, function () { selectCode(); });
     } else {
@@ -232,20 +237,25 @@
 
   function selectCode() {
     var range = document.createRange();
-    range.selectNodeContents($('ready-code'));
+    range.selectNodeContents(byId('ready-code'));
     var sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
-    $('copy-note').textContent = 'Tekan dan tahan kode untuk menyalin.';
-    $('copy-note').hidden = false;
+    byId('copy-note').textContent = 'Tekan dan tahan kode untuk menyalin.';
+    byId('copy-note').hidden = false;
   }
 
-  $('btn-cancel-view').addEventListener('click', function () { forget(); loadPackages(); });
-  $('btn-retry').addEventListener('click', function () { forget(); loadPackages(); });
+  byId('btn-cancel-view').addEventListener('click', function () { forget(); loadPackages(); });
+  byId('btn-retry').addEventListener('click', function () { forget(); loadPackages(); });
 
   // ---- mulai
   var saved = savedOrderId();
-  if (saved) {
+  if (NOT_CONFIGURED) {
+    // Halaman hotspot dipasang tetapi alamat backend belum diisi di beli-config.js
+    show('packages');
+    byId('packages-empty').hidden = false;
+    setError('Penjualan online belum dikonfigurasi. Silakan beli akun langsung dari petugas.');
+  } else if (saved) {
     api('GET', '/api/shop/orders/' + encodeURIComponent(saved)).then(function (data) {
       render(data.order);
     }).catch(function () {

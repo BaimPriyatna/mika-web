@@ -861,10 +861,11 @@ Item bertanda `[ ]` belum dikerjakan atau belum diuji pada sistem sungguhan.
 - [x] Halaman beli `/beli` (daftar paket, QRIS, status, kode akun) dengan CSP ketat
 - [x] Halaman admin Penjualan Online (paket, status konfigurasi, transaksi, coba ulang)
 - [x] `login.html`: tombol Beli Akun; `errors.txt`: pesan error Indonesia ("akun")
+- [x] Halaman beli di folder hotspot (`beli.html/css/js` dihasilkan dari `shop/`, `beli-config.js`) + CORS terbatas untuk `/api/shop/*` (`SHOP_ALLOWED_ORIGINS`)
 - [x] Tes: gateway, store, issuer, service, HTTP, keamanan, halaman beli, hotspot
 - [ ] Uji dengan Midtrans sandbox sungguhan (charge, notifikasi, status)
 - [ ] Uji penerbitan akun di router v6 dan v7 sungguhan
-- [ ] Uji Walled Garden + halaman beli dari ponsel di captive portal
+- [ ] Uji Walled Garden + halaman beli (hotspot/beli.html) dari ponsel di captive portal, termasuk CORS ke backend
 - [ ] Putuskan perilaku pembelian di luar jam operasional
 - [ ] Uji beban
 

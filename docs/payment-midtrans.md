@@ -9,7 +9,8 @@ Penjualan manual (buat akun, cetak PDF A4) tetap berjalan seperti biasa dan tida
 ## 1. Alur
 
 ```
-Pelanggan -> halaman login hotspot -> [Beli Akun] -> /beli (backend) -> pilih paket
+Pelanggan -> halaman login hotspot -> [Beli Akun] -> beli.html (disajikan router, folder hotspot/) -> pilih paket
+beli.html memanggil API backend (lintas origin, CORS terbatas); halaman yang sama juga tersedia langsung di backend: /beli
 backend: buat pesanan (harga dari server) -> Midtrans /v2/charge (QRIS) -> QR ditampilkan
 Pelanggan bayar -> Midtrans -> webhook ke backend  (atau backend memeriksa status ke Midtrans)
 backend: verifikasi tanda tangan + nominal -> pesanan "dibayar" -> buat akun di router (username = password)
@@ -60,7 +61,7 @@ Akibatnya aplikasi admin hanya bisa dibuka dari perangkat tempat server berjalan
    - pilih paket yang dijual dan atur harga (paket dan profil harus sudah dibuat di halaman Paket/Profil),
    - atur batas waktu pembayaran, lalu aktifkan penjualan.
 4. Di dashboard Midtrans, isi Notification URL dengan `https://<alamat-publik>/api/shop/webhook/midtrans` (lihat bagian 4).
-5. Pasang halaman hotspot yang baru (bagian 5).
+5. Pasang halaman hotspot yang baru dan isi `SHOP_ALLOWED_ORIGINS` (bagian 5).
 
 ## 4. Webhook dan jaringan
 
@@ -68,25 +69,55 @@ Midtrans hanya bisa mengirim notifikasi ke alamat **HTTPS yang bisa dijangkau da
 
 Pilihan jika server ada di jaringan sekolah:
 
-1. **Tunnel** (misalnya Cloudflare Tunnel) ke port server. Hanya `/api/shop/webhook/midtrans` yang perlu publik; API admin tetap menolak trafik tunnel (lihat bagian 2).
+1. **Tunnel** (misalnya Cloudflare Tunnel) ke port server; daftarkan nama domain tunnel di `SHOP_ALLOWED_HOSTS`. Hanya `/api/shop/webhook/midtrans` yang perlu publik; API admin tetap menolak trafik tunnel (lihat bagian 2).
 2. **Server publik** (VPS) yang tersambung ke router lewat VPN.
 3. **Tanpa webhook.** Backend memeriksa status ke Midtrans: setiap 8 detik selama halaman pelanggan terbuka, dan tiap 30 detik di latar belakang untuk pesanan yang masih menunggu bayar (sampai 10 menit setelah batas waktu). Akun tetap terbit otomatis, hanya bisa terlambat beberapa detik. Tombol "Cek status" di halaman admin memaksa pemeriksaan.
 
 ## 5. Halaman hotspot dan Walled Garden
 
-File di `hotspot/` dipasang manual ke router (Winbox: Files, folder `hotspot/`). **Simpan salinan file lama dulu.**
+File di `hotspot/` dipasang manual ke router (Winbox: Files, folder `hotspot/`; semua profil hotspot di router ini memakai folder yang sama). **Simpan salinan file lama dulu.**
 
-- `login.html`: isi `var SHOP_URL = 'http://<alamat-server>:4173/beli';` (di bagian skrip paling bawah). Selama kosong, tombol "Beli Akun" tersembunyi.
-- `errors.txt`: pesan kesalahan login berbahasa Indonesia ("Akun tidak valid atau sudah kedaluwarsa", dst.). Router membaca berkas ini dari folder hotspot; jika pesan belum berubah setelah diunggah, nonaktifkan lalu aktifkan lagi server hotspot.
-- `error.html`, `alogin.html`, `status.html`, `logout.html`, `radvert.html`, `style.css`: merek WIFI TKJ.
+### Halaman beli di folder hotspot
 
-Pelanggan yang belum login hanya bisa membuka alamat yang ada di Walled Garden. Tambahkan alamat server (sesuaikan, lalu uji dari ponsel yang belum login):
+Halaman beli disajikan **langsung oleh router**, jadi tombol "Beli Akun" di halaman login membukanya tanpa pindah server:
+
+| File | Isi |
+|---|---|
+| `beli.html`, `beli.css`, `beli.js` | Halaman beli. **Dihasilkan** dari `shop/` (satu sumber dengan halaman `/beli` milik backend). Jangan diedit; ubah `shop/` lalu jalankan `npm run sync:hotspot`. Tes memastikan keduanya tidak menyimpang. |
+| `beli-config.js` | Diedit manual saat pemasangan: `SHOP_API_BASE` (alamat backend) dan `SHOP_LOGIN_URL` (bawaan `/login`). |
+| `login.html` | Tombol "Beli Akun" menaut ke `beli.html`. Ubah `SHOP_URL` untuk mengganti tujuan; kosongkan untuk menyembunyikan tombol. |
+| `errors.txt` | Pesan kesalahan login berbahasa Indonesia ("Akun tidak valid atau sudah kedaluwarsa", dst.). Jika pesan belum berubah setelah diunggah, nonaktifkan lalu aktifkan lagi server hotspot. |
+| `error.html`, `alogin.html`, `status.html`, `logout.html`, `radvert.html`, `style.css` | Merek WIFI TKJ. |
+
+Langkah pemasangan:
+
+1. Di `beli-config.js` isi `window.SHOP_API_BASE = 'http://<alamat-server>:4173';` (tanpa garis miring akhir). Selama kosong, halaman menampilkan "Penjualan online belum dikonfigurasi" dan tidak memanggil jaringan.
+2. Di `.env` server isi asal halaman hotspot yang boleh memanggil API (CORS). Format persis `skema://host[:port]`, tanpa path. Router ini punya dua profil hotspot, jadi daftarkan keduanya:
+   ```
+   SHOP_ALLOWED_ORIGINS=http://hotspot.tkj,http://192.168.20.129,http://wifi.net,http://192.168.100.1
+   ```
+   CORS hanya berlaku untuk `/api/shop/*` publik (bukan webhook, bukan API admin), tidak pernah `*`, dan asal yang tidak terdaftar diblokir browser. Middleware CORS bawaan Vite sengaja dimatikan di `vite.config.ts` (di `vite preview` ia menjawab preflight tanpa header yang dibutuhkan browser).
+   Jika backend dibuka lewat **nama domain atau tunnel** (bukan IP), daftarkan namanya di `SHOP_ALLOWED_HOSTS` (mis. `SHOP_ALLOWED_HOSTS=beli.contoh.com`). Tanpa itu Vite menjawab 403 "Blocked request. This host is not allowed", termasuk untuk webhook Midtrans.
+3. Tambahkan alamat server ke Walled Garden (bagian di bawah).
+4. Unggah `login.html`, `beli.html`, `beli.css`, `beli.js`, `beli-config.js`, dan file lain yang berubah ke folder `hotspot/` router.
+5. Uji dari ponsel yang belum login: login page, tombol Beli Akun, daftar paket muncul.
+
+Catatan teknis:
+
+- Dua pilihan alamat halaman beli: `http://<alamat-hotspot>/beli.html` (router, direkomendasikan) dan `http://<alamat-server>:4173/beli` (backend langsung, tanpa CORS). Isinya sama.
+- Jika halaman hotspot memakai **http**, backend sebaiknya juga http (atau https); halaman **https** tidak boleh memanggil backend **http** (diblokir browser sebagai mixed content).
+- Router mengganti `$(variabel)` pada berkas halaman. Berkas halaman beli sengaja tidak mengandung urutan `$(` dan ini diuji otomatis.
+- Perilaku router MikroTik yang **belum diverifikasi**: bahwa `beli.html`, `beli.js`, `beli.css`, dan `beli-config.js` dilayani apa adanya kepada klien yang belum login seperti `style.css` dan `md5.js` yang sudah ada. Uji langsung dengan membuka `http://<alamat-hotspot>/beli.html` dari ponsel yang belum login.
+
+### Walled Garden
+
+Pelanggan yang belum login hanya bisa membuka alamat yang ada di Walled Garden. Backend harus ditambahkan (sesuaikan, lalu uji dari ponsel yang belum login):
 
 ```
 /ip hotspot walled-garden ip add action=accept dst-address=<IP-server> dst-port=4173 protocol=tcp comment="WIFI TKJ beli akun"
 ```
 
-Jika server diakses lewat nama domain, gunakan `/ip hotspot walled-garden add dst-host=<domain>`.
+Jika backend diakses lewat nama domain, gunakan `/ip hotspot walled-garden add dst-host=<domain>`.
 
 **Catatan penting untuk pelanggan:** sebelum akun aktif, WiFi ini belum terhubung ke internet. Aplikasi e-wallet atau mobile banking di ponsel yang sama butuh internet, jadi pelanggan perlu data seluler, atau memindai QR dari perangkat lain. Halaman beli menyebutkan ini. Membuka akses ke domain e-wallet lewat Walled Garden tidak disarankan karena daftar domainnya panjang dan berubah.
 
@@ -133,6 +164,7 @@ Tes otomatis (`npm test`) memakai Midtrans palsu dan router palsu; itu **bukan**
 - Pembuatan akun otomatis di RouterOS v6 dan v7 sungguhan, termasuk kecukupan policy user router khusus.
 - Hubungan dengan timer voucher di router (`vm-cleaner`, `vm-close`): akun online memakai comment yang sama dengan voucher manual (ditambah `sale=online`), tetapi belum diuji bahwa timer memprosesnya.
 - Walled Garden, tampilan di ponsel Android/iOS, dan jendela captive portal bawaan.
+- Pelayanan `beli.html`/`beli.js`/`beli.css`/`beli-config.js` oleh router kepada klien yang belum login, dan panggilan lintas origin (CORS) dari halaman hotspot ke backend pada captive portal sungguhan.
 - Perilaku bila pelanggan membayar sebelum jam operasional (07:30) atau setelah tutup (14:30): penjualan online belum mengenal jam operasional. Akun dibuat, tetapi hotspot mungkin sedang nonaktif.
 - Beban: belum diuji dengan banyak pesanan bersamaan.
 - Pemindaian QR dari layar yang sama dengan halaman login (alur satu perangkat).

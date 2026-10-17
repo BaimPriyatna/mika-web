@@ -21,7 +21,7 @@ Backend (klien API binary/REST, penjualan online) berjalan sebagai plugin Vite d
 - `DEV-SPEC.md`, `DESIGN.md`, `tasks.md`: spesifikasi, desain, dan progres.
 - `docs/payment-midtrans.md`: penjualan online (setup, keamanan, webhook, Walled Garden, pemulihan, yang belum teruji).
 - `docs/spike.md`: hasil uji awal ke router asli.
-- `hotspot/`: halaman captive portal (dipasang manual ke router). `shop/`: halaman beli pelanggan.
+- `hotspot/`: halaman captive portal, termasuk halaman beli (`beli.html`) yang disajikan router; dipasang manual. `shop/`: sumber halaman beli (`npm run sync:hotspot` menghasilkan `hotspot/beli.*`).
 - `.env.example`: konfigurasi server (Midtrans, kredensial router, dsb.).
 
 ## Keamanan singkat

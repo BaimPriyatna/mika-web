@@ -135,6 +135,25 @@ export function createShopHandler(deps: ShopHttpDeps) {
       // ---- API publik
       const ip = clientIp(req);
 
+      // CORS hanya untuk API publik (bukan webhook, bukan admin) dan hanya untuk origin yang didaftarkan
+      // (halaman beli yang disajikan router dari folder hotspot memanggil backend dari origin lain).
+      if (pathname !== '/api/shop/webhook/midtrans') {
+        res.setHeader('Vary', 'Origin');
+        const origin = req.headers.origin;
+        const allowed = typeof origin === 'string' && config.shopAllowedOrigins.includes(origin);
+        if (allowed) {
+          res.setHeader('Access-Control-Allow-Origin', origin);
+          res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+          res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Idempotency-Key');
+          res.setHeader('Access-Control-Max-Age', '600');
+        }
+        if (method === 'OPTIONS') {
+          res.statusCode = allowed ? 204 : 403;
+          res.end();
+          return true;
+        }
+      }
+
       if (pathname === '/api/shop/webhook/midtrans') {
         if (method !== 'POST') {
           sendJson(405, { success: false, error: 'Metode tidak diizinkan' });

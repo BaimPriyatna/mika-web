@@ -95,9 +95,9 @@ $(endif)
 <!--
   document.login.username.focus();
 
-  // Alamat halaman beli akun (backend WIFI TKJ), mis. 'http://192.168.20.1:4173/beli'.
-  // Alamat ini WAJIB sudah ada di Walled Garden router. Kosongkan untuk menyembunyikan tombol.
-  var SHOP_URL = '';
+  // Halaman beli akun yang disajikan router dari folder ini (beli.html). Alamat backend diatur di beli-config.js.
+  // Kosongkan untuk menyembunyikan tombol Beli Akun.
+  var SHOP_URL = 'beli.html';
   if (SHOP_URL) {
     document.getElementById('beli-link').href = SHOP_URL;
     document.getElementById('beli-wrap').style.display = 'block';

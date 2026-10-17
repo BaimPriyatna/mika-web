@@ -207,18 +207,24 @@ describe('halaman hotspot: merek WIFI TKJ', () => {
 });
 
 describe('hotspot/login.html: tombol Beli Akun', () => {
-  it('tersembunyi selama SHOP_URL kosong (bawaan)', () => {
+  it('bawaan: tombol tampil dan menaut ke beli.html (halaman beli yang disajikan router)', () => {
     const { doc } = load(CHAP);
+    expect((doc.getElementById('beli-wrap') as HTMLElement).style.display).toBe('block');
+    expect(doc.getElementById('beli-link')?.getAttribute('href')).toBe('beli.html');
+    expect(doc.getElementById('beli-link')?.textContent).toBe('Beli Akun');
+  });
+
+  it('tersembunyi jika SHOP_URL dikosongkan', () => {
+    const src = loginSrc.replace("var SHOP_URL = 'beli.html';", "var SHOP_URL = '';");
+    const { doc } = load(CHAP, src);
     expect(doc.getElementById('beli-wrap')?.getAttribute('style')).toContain('display: none');
     expect(doc.getElementById('beli-link')?.getAttribute('href')).toBe('#');
   });
 
-  it('tampil dan menaut ke alamat halaman beli setelah SHOP_URL diisi', () => {
-    const src = loginSrc.replace("var SHOP_URL = '';", "var SHOP_URL = 'http://192.168.20.1:4173/beli';");
+  it('SHOP_URL bisa diganti ke alamat lain', () => {
+    const src = loginSrc.replace("var SHOP_URL = 'beli.html';", "var SHOP_URL = 'http://192.168.20.1:4173/beli';");
     const { doc } = load(CHAP, src);
-    expect((doc.getElementById('beli-wrap') as HTMLElement).style.display).toBe('block');
     expect(doc.getElementById('beli-link')?.getAttribute('href')).toBe('http://192.168.20.1:4173/beli');
-    expect(doc.getElementById('beli-link')?.textContent).toBe('Beli Akun');
   });
 
   it('menyebut "akun" dan tidak memuat rahasia pembayaran apa pun', () => {

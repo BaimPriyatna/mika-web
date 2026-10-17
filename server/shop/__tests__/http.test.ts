@@ -160,6 +160,56 @@ describe('HTTP penjualan online', () => {
     });
   });
 
+  describe('CORS untuk halaman beli yang disajikan router', () => {
+    const ORIGIN = 'http://hotspot.tkj';
+
+    it('preflight dari origin terdaftar: 204 dengan metode dan header yang diizinkan (termasuk Idempotency-Key)', async () => {
+      const r = await call('OPTIONS', '/api/shop/orders', {
+        headers: { Origin: ORIGIN, 'Access-Control-Request-Method': 'POST', 'Access-Control-Request-Headers': 'content-type,idempotency-key' },
+      });
+      expect(r.status).toBe(204);
+      expect(r.headers['access-control-allow-origin']).toBe(ORIGIN);
+      expect(r.headers['access-control-allow-methods']).toBe('GET, POST, OPTIONS');
+      expect(r.headers['access-control-allow-headers']).toBe('Content-Type, Idempotency-Key');
+      expect(r.headers['vary']).toContain('Origin');
+    });
+
+    it('preflight dari origin lain atau tanpa Origin: ditolak, tanpa header CORS', async () => {
+      const evil = await call('OPTIONS', '/api/shop/orders', { headers: { Origin: 'http://evil.example' } });
+      expect(evil.status).toBe(403);
+      expect(evil.headers['access-control-allow-origin']).toBeUndefined();
+      expect((await call('OPTIONS', '/api/shop/orders')).status).toBe(403);
+    });
+
+    it('permintaan nyata dari origin terdaftar mendapat header CORS; dari origin lain tidak', async () => {
+      const ok = await call('GET', '/api/shop/packages', { headers: { Origin: ORIGIN } });
+      expect(ok.status).toBe(200);
+      expect(ok.headers['access-control-allow-origin']).toBe(ORIGIN);
+
+      const evil = await call('GET', '/api/shop/packages', { headers: { Origin: 'http://evil.example' } });
+      expect(evil.headers['access-control-allow-origin']).toBeUndefined();
+      expect(evil.headers['vary']).toContain('Origin');
+
+      const post = await call('POST', '/api/shop/orders', { body: { packageId: 'plan-1h' }, headers: { Origin: ORIGIN } });
+      expect(post.status).toBe(201);
+      expect(post.headers['access-control-allow-origin']).toBe(ORIGIN);
+    });
+
+    it('tidak pernah wildcard', async () => {
+      const r = await call('GET', '/api/shop/packages', { headers: { Origin: ORIGIN } });
+      expect(r.headers['access-control-allow-origin']).not.toBe('*');
+    });
+
+    it('API admin dan webhook TIDAK mendapat CORS walau origin terdaftar', async () => {
+      const admin = await call('GET', '/api/shop-admin/status', { headers: { Origin: ORIGIN } });
+      expect(admin.headers['access-control-allow-origin']).toBeUndefined();
+      const preAdmin = await call('OPTIONS', '/api/shop-admin/settings', { headers: { Origin: ORIGIN } });
+      expect(preAdmin.headers['access-control-allow-origin']).toBeUndefined();
+      const hook = await call('POST', '/api/shop/webhook/midtrans', { body: { a: 1 }, headers: { Origin: ORIGIN } });
+      expect(hook.headers['access-control-allow-origin']).toBeUndefined();
+    });
+  });
+
   describe('webhook Midtrans', () => {
     it('tanda tangan salah: 401, pesanan tetap pending', async () => {
       const created = await call('POST', '/api/shop/orders', { body: { packageId: 'plan-1h' } });
